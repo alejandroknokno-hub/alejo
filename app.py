@@ -590,7 +590,8 @@ with tab_ia:
                 f"Guardado automáticamente en `{config.CONSOLIDADO_PATH.name}` · "
                 f"{len(cons_df)} entrada(s) acumuladas en un único documento (sin separar por fecha). "
                 "Hojas: Consolidación · Registros · Colaboradores · Bitácora · KPIs · "
-                "Tablas dinámicas · Dashboard."
+                "Tablas dinámicas · Dashboard · **Pivote interactivo** (tabla dinámica nativa "
+                "de Excel; al abrir el archivo, permite *Actualizar* para recalcularla)."
             )
             st.dataframe(
                 df_etiquetado_generico(

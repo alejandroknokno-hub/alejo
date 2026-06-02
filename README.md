@@ -43,6 +43,11 @@ el documento de control** automáticamente.
   - *KPIs* — indicadores de control (totales, tasa de aprobación, pendientes, valores) y alertas.
   - *Tablas dinámicas* — resúmenes por estado, por vendedor y por combinación contable.
   - *Dashboard* — gráficos nativos de Excel (torta por estado, barras por vendedor y por combinación).
+  - *Pivote interactivo* — una **tabla dinámica nativa de Excel** (campos arrastrables).
+    Se genera inyectando las partes OOXML de la PivotTable con `refreshOnLoad`, de modo que
+    **Excel la recalcula al abrir** el archivo a partir de la hoja *Registros*. Por defecto
+    cuenta registros por estado; en Excel puedes arrastrar cualquier otro campo (vendedor,
+    combinación contable, mes, etc.).
 
   Al regenerar tras responder aclaraciones, se actualiza la última entrada de la sesión
   (no se duplica).
@@ -139,7 +144,8 @@ alejo/
 │   ├── grabador.py         # Grabación tipo video: fotogramas + teclado → GIF
 │   ├── colaboradores.py    # Versión Global: ficha del colaborador
 │   ├── analista_ia.py      # Conexión con Claude: genera documentos de control
-│   └── consolidacion.py    # Excel único acumulado "Consolidación de jornada"
+│   ├── consolidacion.py    # Excel único acumulado "Consolidación de jornada"
+│   └── pivote_excel.py     # Inyecta una tabla dinámica (PivotTable) nativa en el .xlsx
 └── tests/
     └── test_app.py         # Pruebas básicas
 ```

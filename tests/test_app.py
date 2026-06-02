@@ -284,6 +284,28 @@ def test_consolidacion_hojas_analiticas_y_kpis(tmp_path, monkeypatch):
     assert "Registros totales" in texto
 
 
+def test_consolidacion_pivote_interactivo_inyectado(tmp_path, monkeypatch):
+    import zipfile
+    import pandas as pd
+
+    _usar_temp(tmp_path, monkeypatch)
+    data_manager.agregar_registro(_registro_valido())
+
+    consolidacion.guardar_documento(
+        {"titulo": "D", "resumen": "r", "documento_markdown": "# x", "preguntas": []},
+        sesion="s1", df_registros=data_manager.leer_registros(),
+    )
+
+    # La hoja existe y las partes OOXML de la tabla dinámica fueron inyectadas.
+    with zipfile.ZipFile(config.CONSOLIDADO_PATH) as z:
+        partes = z.namelist()
+    assert "xl/pivotTables/pivotTable1.xml" in partes
+    assert "xl/pivotCache/pivotCacheDefinition1.xml" in partes
+
+    # El archivo sigue siendo un .xlsx válido y legible.
+    assert consolidacion.HOJA_PIVOTE_INT in pd.ExcelFile(config.CONSOLIDADO_PATH).sheet_names
+
+
 if __name__ == "__main__":
     import subprocess
 

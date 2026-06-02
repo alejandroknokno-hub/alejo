@@ -18,7 +18,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from . import config, indicadores
+from . import config, indicadores, pivote_excel
 
 # Nombres de las hojas de detalle.
 HOJA_REGISTROS = "Registros"
@@ -28,6 +28,7 @@ HOJA_BITACORA = "Bitácora"
 HOJA_KPIS = "KPIs"
 HOJA_PIVOTES = "Tablas dinámicas"
 HOJA_DASHBOARD = "Dashboard"
+HOJA_PIVOTE_INT = "Pivote interactivo"
 
 
 def asegurar_archivo() -> None:
@@ -125,6 +126,15 @@ def _escribir_libro(
         _hoja(writer, HOJA_BITACORA, df_bitacora, {}, None)
         # Hojas analíticas: KPIs, tablas dinámicas y dashboard con gráficos.
         _hojas_analiticas(writer.book, df_registros)
+        # Hoja vacía donde se inyectará la tabla dinámica nativa (más abajo).
+        writer.book.create_sheet(HOJA_PIVOTE_INT)
+
+    # Inyecta la PivotTable interactiva (recalculada por Excel al abrir).
+    # Si algo falla, el resto del libro queda intacto y válido.
+    pivote_excel.inyectar_pivote(
+        config.CONSOLIDADO_PATH, df_registros,
+        hoja_datos=HOJA_REGISTROS, hoja_pivote=HOJA_PIVOTE_INT,
+    )
 
 
 # --- Hojas analíticas (KPIs, tablas dinámicas y dashboard) ------------------
