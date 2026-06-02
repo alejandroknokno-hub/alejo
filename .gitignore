@@ -8,8 +8,10 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 
-# Datos generados en tiempo de ejecución (el Excel de registros)
+# Datos generados en tiempo de ejecución (Excel, capturas y bitácora)
 data/*.xlsx
+data/*.csv
+data/capturas/
 !data/.gitkeep
 
 # Streamlit

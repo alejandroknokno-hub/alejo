@@ -46,3 +46,49 @@ MESES_ES = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ]
+
+# --- Versión Oracle: monitoreo por captura de pantalla ---------------------
+# Carpeta donde se guardan las capturas de pantalla del monitoreo.
+CAPTURAS_DIR = DATA_DIR / "capturas"
+# Bitácora de eventos (entradas, modificaciones y capturas) de cada sesión.
+MONITOR_LOG = DATA_DIR / "monitor_log.csv"
+MONITOR_COLUMNS = ["fecha_hora", "sesion", "tipo", "descripcion", "archivo"]
+# Tipos de evento que se registran en la bitácora.
+TIPOS_EVENTO = ["Captura", "Entrada", "Modificación", "Consulta", "Nota", "Texto"]
+
+# --- Versión Global: información del colaborador ----------------------------
+GLOBAL_PATH = DATA_DIR / "global_colaboradores.xlsx"
+GLOBAL_SHEET = "Colaboradores"
+
+COLAB_COLUMNS: dict[str, str] = {
+    "codigo_vendedor": "Código de vendedor",
+    "cedula": "Cédula",
+    "nombre": "Nombre",
+    "cargo": "Cargo",
+    "area": "Área",
+    "correo": "Correo",
+    "telefono": "Teléfono",
+    "fecha_ingreso": "Fecha de ingreso",
+    "estado": "Estado",
+}
+COLAB_ORDER: list[str] = list(COLAB_COLUMNS.keys())
+ESTADOS_COLAB = ["Activo", "Inactivo", "Vacaciones", "Retirado"]
+
+# --- Consolidación de jornada (un único Excel acumulado, sin separar por fecha)
+CONSOLIDADO_PATH = DATA_DIR / "consolidacion_de_jornada.xlsx"
+CONSOLIDADO_SHEET = "Consolidación de jornada"
+CONSOLIDADO_COLUMNS: dict[str, str] = {
+    "fecha_hora": "Fecha y hora",
+    "sesion": "Sesión",
+    "usuario": "Usuario",
+    "registros_total": "Registros",
+    "valor_total": "Valor total",
+    "titulo": "Título",
+    "resumen": "Resumen",
+    "preguntas_pendientes": "Preguntas pendientes",
+    "documento_markdown": "Documento",
+}
+CONSOLIDADO_ORDER: list[str] = list(CONSOLIDADO_COLUMNS.keys())
+
+# Caché del indicador SIRO completado (para incluirlo en la consolidación).
+SIRO_CACHE_PATH = DATA_DIR / "siro_cache.xlsx"
