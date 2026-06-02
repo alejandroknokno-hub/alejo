@@ -231,6 +231,36 @@ def test_consolidacion_unico_documento_acumula(tmp_path, monkeypatch):
     assert not (df["titulo"] == "D2").any()
 
 
+def test_consolidacion_tiene_varias_hojas(tmp_path, monkeypatch):
+    import pandas as pd
+
+    _usar_temp(tmp_path, monkeypatch)
+    data_manager.agregar_registro(_registro_valido())
+    colaboradores.agregar_colaborador({
+        "codigo_vendedor": "V-001", "cedula": "1023456789", "nombre": "Ana", "estado": "Activo",
+    })
+    monitor.registrar_evento("Entrada", "abro oracle", sesion="s1")
+
+    doc = {"titulo": "D", "resumen": "r", "documento_markdown": "# x", "preguntas": []}
+    consolidacion.guardar_documento(
+        doc, sesion="s1", usuario="u",
+        df_registros=data_manager.leer_registros(),
+        df_colaboradores=colaboradores.leer_colaboradores(),
+        df_bitacora=monitor.leer_log("s1"),
+    )
+
+    hojas = pd.ExcelFile(config.CONSOLIDADO_PATH).sheet_names
+    assert config.CONSOLIDADO_SHEET in hojas
+    assert consolidacion.HOJA_REGISTROS in hojas
+    assert consolidacion.HOJA_COLABORADORES in hojas
+    assert consolidacion.HOJA_BITACORA in hojas
+
+    # La hoja de registros trae el detalle (cédula del registro capturado).
+    reg = pd.read_excel(config.CONSOLIDADO_PATH, sheet_name=consolidacion.HOJA_REGISTROS)
+    assert "Cédula" in reg.columns
+    assert len(reg) == 1
+
+
 if __name__ == "__main__":
     import subprocess
 

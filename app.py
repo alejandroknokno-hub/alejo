@@ -508,10 +508,14 @@ with tab_ia:
                 )
             if resultado["ok"]:
                 st.session_state["doc_ia"] = resultado
-                # Guardado automático en el Excel único "Consolidación de jornada".
+                # Guardado automático en el Excel único "Consolidación de jornada"
+                # (varias hojas: consolidación + registros + colaboradores + bitácora).
                 consolidacion.guardar_documento(
                     resultado, sesion=sesion_actual, usuario=usuario,
                     kpis=indicadores.kpis_generales(df), actualizar=False,
+                    df_registros=df,
+                    df_colaboradores=colaboradores.leer_colaboradores(),
+                    df_bitacora=monitor.leer_log(sesion_actual),
                 )
             else:
                 st.error(f"❌ {resultado['error']}")
@@ -551,6 +555,9 @@ with tab_ia:
                             consolidacion.guardar_documento(
                                 nuevo, sesion=sesion_actual, usuario=usuario,
                                 kpis=indicadores.kpis_generales(df), actualizar=True,
+                                df_registros=df,
+                                df_colaboradores=colaboradores.leer_colaboradores(),
+                                df_bitacora=monitor.leer_log(sesion_actual),
                             )
                             st.rerun()
                         else:
@@ -581,7 +588,8 @@ with tab_ia:
             cons_df = consolidacion.leer_consolidado()
             st.caption(
                 f"Guardado automáticamente en `{config.CONSOLIDADO_PATH.name}` · "
-                f"{len(cons_df)} entrada(s) acumuladas en un único documento (sin separar por fecha)."
+                f"{len(cons_df)} entrada(s) acumuladas en un único documento (sin separar por fecha). "
+                "Hojas: Consolidación · Registros · Colaboradores · Bitácora."
             )
             st.dataframe(
                 df_etiquetado_generico(
@@ -589,13 +597,14 @@ with tab_ia:
                 ),
                 use_container_width=True, hide_index=True,
             )
-            st.download_button(
-                "⬇️ Descargar Consolidación de jornada (Excel)",
-                data=excel_en_memoria_generico(cons_df, config.CONSOLIDADO_COLUMNS, "Consolidacion"),
-                file_name="consolidacion_de_jornada.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
-            )
+            with open(config.CONSOLIDADO_PATH, "rb") as fh:
+                st.download_button(
+                    "⬇️ Descargar Consolidación de jornada (Excel · varias hojas)",
+                    data=fh.read(),
+                    file_name="consolidacion_de_jornada.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
 
 
 # ---------------------------------------------------------------------------

@@ -34,9 +34,15 @@ el documento de control** automáticamente.
   una versión depurada.
 - El documento se descarga en Markdown.
 - **Consolidación de jornada**: cada documento generado se guarda automáticamente en
-  **un único Excel** (`data/consolidacion_de_jornada.xlsx`, hoja *“Consolidación de
-  jornada”*) que **va acumulando todo, sin separarlo por fecha**. Al regenerar tras
-  responder aclaraciones, se actualiza la última entrada de la sesión (no se duplica).
+  **un único Excel** (`data/consolidacion_de_jornada.xlsx`) que **va acumulando todo,
+  sin separarlo por fecha**, organizado **por hojas**:
+  - *Consolidación de jornada* — una fila por cada documento (acumula).
+  - *Registros* — detalle de los registros documentales.
+  - *Colaboradores* — ficha de los colaboradores.
+  - *Bitácora* — eventos de la sesión de monitoreo.
+
+  Al regenerar tras responder aclaraciones, se actualiza la última entrada de la sesión
+  (no se duplica).
 - Configura tu **API key** en la barra lateral (campo *API key de Anthropic*) o define la
   variable de entorno `ANTHROPIC_API_KEY`. La key se usa solo en tu sesión.
 - Modelo: `claude-opus-4-8`, con *adaptive thinking*, *prompt caching* del prompt estable y
