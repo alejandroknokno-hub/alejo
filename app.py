@@ -78,14 +78,26 @@ monitoreo_activo = st.sidebar.toggle(
     "📸 Capturar en cada refresco", value=False, disabled=not tiempo_real,
     help="Requiere el modo tiempo real activo. Toma una captura de pantalla en cada ciclo.",
 )
+umbral_cambio = st.sidebar.slider(
+    "🎯 Sensibilidad de cambio (%)", 0.5, 20.0, 2.0, 0.5, disabled=not tiempo_real,
+    help="Cambio mínimo de pantalla para registrar una modificación automática. Más bajo = más sensible.",
+)
 
 if tiempo_real and st_autorefresh is not None:
     ciclo = st_autorefresh(interval=intervalo * 1000, key="auto_refresh")
-    # Captura automática ligada al ciclo de refresco.
+    # Captura automática + detección de cambios ligada al ciclo de refresco.
     if monitoreo_activo:
-        res_cap = monitor.capturar_pantalla(sesion=sesion_actual, descripcion="Captura automática (tiempo real)")
+        res_cap = monitor.capturar_y_detectar(
+            sesion=sesion_actual, umbral_pct=umbral_cambio,
+            descripcion="Captura automática (tiempo real)",
+        )
         if res_cap["ok"]:
-            st.sidebar.caption(f"✅ Captura #{ciclo} guardada")
+            if res_cap["cambio_detectado"]:
+                st.sidebar.warning(f"✏️ Cambio detectado: {res_cap['diferencia_pct']:.1f}% (captura #{ciclo})")
+            elif res_cap.get("primera"):
+                st.sidebar.caption(f"✅ Captura inicial #{ciclo} (base de comparación)")
+            else:
+                st.sidebar.caption(f"✅ Sin cambios · captura #{ciclo} ({res_cap['diferencia_pct']:.1f}%)")
         else:
             st.sidebar.caption("⚠️ Captura no disponible aquí")
 elif tiempo_real and st_autorefresh is None:
@@ -225,8 +237,9 @@ with tab_dashboard:
 with tab_monitor:
     st.subheader("🖥️ Monitoreo del trabajo en Oracle")
     st.caption(
-        "Registra tus entradas y modificaciones con capturas de pantalla y analiza "
-        "cómo es tu flujo de trabajo durante la sesión."
+        "Captura tu pantalla y **detecta automáticamente** los cambios respecto a la "
+        "captura anterior. Cuando el cambio supera la sensibilidad configurada, se "
+        "registra solo como una *modificación*. Ajusta la sensibilidad en la barra lateral."
     )
 
     if not monitor.captura_disponible():
@@ -238,10 +251,17 @@ with tab_monitor:
 
     # --- Acciones rápidas ---
     a1, a2, a3 = st.columns(3)
-    if a1.button("📸 Capturar ahora", use_container_width=True):
-        res = monitor.capturar_pantalla(sesion=sesion_actual, descripcion="Captura manual")
+    if a1.button("📸 Capturar y detectar", use_container_width=True):
+        res = monitor.capturar_y_detectar(
+            sesion=sesion_actual, umbral_pct=umbral_cambio, descripcion="Captura manual",
+        )
         if res["ok"]:
-            st.success("Captura guardada.")
+            if res["cambio_detectado"]:
+                st.success(f"✏️ Cambio detectado automáticamente: {res['diferencia_pct']:.1f}% de la pantalla.")
+            elif res.get("primera"):
+                st.info("Captura inicial guardada (servirá de base para comparar).")
+            else:
+                st.info(f"Captura guardada. Sin cambios relevantes ({res['diferencia_pct']:.1f}%).")
         else:
             st.error(res["error"])
 

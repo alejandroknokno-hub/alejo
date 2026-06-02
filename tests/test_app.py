@@ -60,6 +60,22 @@ def test_ciclo_completo_excel(tmp_path, monkeypatch):
     assert kpis["tasa_aprobacion"] == 100.0
 
 
+def test_comparar_imagenes_detecta_diferencia(tmp_path):
+    """La comparación da ~0% en imágenes iguales y alto % en imágenes distintas."""
+    from PIL import Image
+
+    iguales_a = tmp_path / "a.png"
+    iguales_b = tmp_path / "b.png"
+    distinta = tmp_path / "c.png"
+
+    Image.new("RGB", (200, 120), (255, 255, 255)).save(iguales_a)
+    Image.new("RGB", (200, 120), (255, 255, 255)).save(iguales_b)
+    Image.new("RGB", (200, 120), (0, 0, 0)).save(distinta)
+
+    assert monitor.comparar_imagenes(str(iguales_a), str(iguales_b)) < 1.0
+    assert monitor.comparar_imagenes(str(iguales_a), str(distinta)) > 90.0
+
+
 def _usar_temp(tmp_path, monkeypatch):
     """Redirige todas las rutas de datos a una carpeta temporal."""
     monkeypatch.setattr(config, "DATA_DIR", tmp_path)

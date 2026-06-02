@@ -105,6 +105,79 @@ def capturar_pantalla(sesion: str = "", descripcion: str = "Captura automática"
     return {"ok": True, "archivo": str(ruta), "error": None}
 
 
+def _ruta_ultima_captura(sesion: str | None = None) -> str | None:
+    """Devuelve la ruta de la última captura de la sesión, o None si no hay."""
+    recientes = capturas_recientes(sesion, limite=1)
+    return recientes[0]["ruta"] if recientes else None
+
+
+# --- Detección automática de cambios ---------------------------------------
+def comparar_imagenes(ruta_a: str, ruta_b: str, tam: tuple[int, int] = (320, 180)) -> float:
+    """Compara dos capturas y devuelve el % de pantalla que cambió (0-100).
+
+    Las imágenes se reducen y pasan a escala de grises para que la comparación
+    sea rápida y tolerante a pequeñas diferencias (cursor, antialias). Un píxel
+    se considera "cambiado" si su brillo varía más de 25 niveles.
+    """
+    from PIL import Image
+    import numpy as np
+
+    a = Image.open(ruta_a).convert("L").resize(tam)
+    b = Image.open(ruta_b).convert("L").resize(tam)
+    arr_a = np.asarray(a, dtype="int16")
+    arr_b = np.asarray(b, dtype="int16")
+    diferencia = np.abs(arr_a - arr_b)
+    cambiados = int(np.count_nonzero(diferencia > 25))
+    return cambiados / diferencia.size * 100.0
+
+
+def capturar_y_detectar(
+    sesion: str = "",
+    umbral_pct: float = 2.0,
+    descripcion: str = "Captura automática",
+) -> dict:
+    """Toma una captura y detecta automáticamente si hubo un cambio respecto a la anterior.
+
+    Si el cambio supera `umbral_pct`, registra un evento "Modificación" automático.
+
+    Devuelve {"ok", "archivo", "cambio_detectado", "diferencia_pct", "primera", "error"}.
+    """
+    previa = _ruta_ultima_captura(sesion)
+    res = capturar_pantalla(sesion=sesion, descripcion=descripcion)
+    if not res["ok"]:
+        return {**res, "cambio_detectado": False, "diferencia_pct": 0.0, "primera": False}
+
+    nueva = res["archivo"]
+    if previa is None:
+        # Primera captura de la sesión: no hay con qué comparar.
+        return {**res, "cambio_detectado": False, "diferencia_pct": 0.0, "primera": True}
+
+    try:
+        diff = comparar_imagenes(previa, nueva)
+    except Exception as exc:  # pragma: no cover - depende de Pillow/IO
+        return {**res, "cambio_detectado": False, "diferencia_pct": 0.0,
+                "primera": False, "error": f"No se pudo comparar: {exc}"}
+
+    detectado = diff >= umbral_pct
+    if detectado:
+        from pathlib import Path
+
+        registrar_evento(
+            "Modificación",
+            f"Cambio detectado automáticamente ({diff:.1f}% de la pantalla)",
+            sesion=sesion,
+            archivo=Path(nueva).name,
+        )
+    return {
+        "ok": True,
+        "archivo": nueva,
+        "cambio_detectado": detectado,
+        "diferencia_pct": diff,
+        "primera": False,
+        "error": None,
+    }
+
+
 def capturas_recientes(sesion: str | None = None, limite: int = 12) -> list[dict]:
     """Lista las últimas capturas (ruta + fecha) para mostrar en la galería."""
     df = leer_log(sesion)

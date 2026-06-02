@@ -29,6 +29,9 @@ trabajo (Oracle):
 
 - **Captura de pantalla** manual (botón) o automática (en cada refresco del modo
   tiempo real). Las imágenes se guardan en `data/capturas/`.
+- **Detección automática de cambios**: cada captura se compara con la anterior y,
+  si el cambio visual supera la *sensibilidad* configurada, se registra solo como
+  una **modificación detectada**. No tienes que anotar nada a mano.
 - **Bitácora de eventos**: registra entradas, modificaciones, consultas y notas.
 - **Sesión de prueba**: la app analiza tu flujo de trabajo (duración, ritmo,
   actividad por minuto y tipos de acción) para entender *cómo trabajas*.
