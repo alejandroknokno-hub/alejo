@@ -261,6 +261,29 @@ def test_consolidacion_tiene_varias_hojas(tmp_path, monkeypatch):
     assert len(reg) == 1
 
 
+def test_consolidacion_hojas_analiticas_y_kpis(tmp_path, monkeypatch):
+    import pandas as pd
+
+    _usar_temp(tmp_path, monkeypatch)
+    data_manager.agregar_registro(_registro_valido())  # estado Aprobado
+
+    doc = {"titulo": "D", "resumen": "r", "documento_markdown": "# x", "preguntas": []}
+    consolidacion.guardar_documento(
+        doc, sesion="s1", df_registros=data_manager.leer_registros(),
+    )
+
+    hojas = pd.ExcelFile(config.CONSOLIDADO_PATH).sheet_names
+    assert consolidacion.HOJA_KPIS in hojas
+    assert consolidacion.HOJA_PIVOTES in hojas
+    assert consolidacion.HOJA_DASHBOARD in hojas
+
+    # La hoja KPIs refleja el indicador (1 registro aprobado -> 100% aprobación).
+    kpi = pd.read_excel(config.CONSOLIDADO_PATH, sheet_name=consolidacion.HOJA_KPIS, header=None)
+    texto = " ".join(kpi.fillna("").astype(str).values.ravel().tolist())
+    assert "Tasa de aprobación" in texto
+    assert "Registros totales" in texto
+
+
 if __name__ == "__main__":
     import subprocess
 

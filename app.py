@@ -589,7 +589,8 @@ with tab_ia:
             st.caption(
                 f"Guardado automáticamente en `{config.CONSOLIDADO_PATH.name}` · "
                 f"{len(cons_df)} entrada(s) acumuladas en un único documento (sin separar por fecha). "
-                "Hojas: Consolidación · Registros · Colaboradores · Bitácora."
+                "Hojas: Consolidación · Registros · Colaboradores · Bitácora · KPIs · "
+                "Tablas dinámicas · Dashboard."
             )
             st.dataframe(
                 df_etiquetado_generico(

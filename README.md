@@ -40,6 +40,9 @@ el documento de control** automáticamente.
   - *Registros* — detalle de los registros documentales.
   - *Colaboradores* — ficha de los colaboradores.
   - *Bitácora* — eventos de la sesión de monitoreo.
+  - *KPIs* — indicadores de control (totales, tasa de aprobación, pendientes, valores) y alertas.
+  - *Tablas dinámicas* — resúmenes por estado, por vendedor y por combinación contable.
+  - *Dashboard* — gráficos nativos de Excel (torta por estado, barras por vendedor y por combinación).
 
   Al regenerar tras responder aclaraciones, se actualiza la última entrada de la sesión
   (no se duplica).
