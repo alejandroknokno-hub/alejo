@@ -286,6 +286,11 @@ def _leer_cache_siro() -> dict:
         return {}
 
 
+def leer_siro() -> dict:
+    """API pública: devuelve las hojas del indicador SIRO guardado (o {})."""
+    return _leer_cache_siro()
+
+
 def _hojas_siro(writer, dfs_siro: dict) -> None:
     """Escribe las hojas de datos del indicador SIRO + una hoja de gráficos SIRO."""
     if not dfs_siro:

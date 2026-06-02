@@ -37,6 +37,11 @@ bitácora de la jornada). El documento debe incluir, cuando aplique:
 - Observaciones sobre el flujo de trabajo (entradas, modificaciones detectadas, texto escrito).
 - Recomendaciones.
 
+Si se incluye un resumen del INDICADOR SIRO (creación en Oracle y novedades), \
+intégralo en el documento: comenta los SIROS por estado, rangos de días, índices de \
+efectividad (EFECTIVO/RETRASO) y pendientes, y relaciona estos indicadores con el control \
+documental de la jornada.
+
 REGLAS ESTRICTAS:
 - Usa SOLO los datos proporcionados. NO inventes valores, nombres, cédulas ni cifras.
 - Si un dato es ambiguo, falta, está duplicado, o su ORIGEN no queda claro en la sesión \
@@ -100,6 +105,7 @@ def construir_contexto(
     df_bitacora: pd.DataFrame,
     sesion: str = "",
     aclaraciones: list[dict] | None = None,
+    contexto_siro: str = "",
 ) -> str:
     """Arma el mensaje de usuario con todos los datos capturados en la jornada."""
     partes = [
@@ -111,6 +117,10 @@ def construir_contexto(
         f"\n=== BITÁCORA DE LA SESIÓN '{sesion}' (CSV) ===",
         _csv(df_bitacora, {}),
     ]
+
+    if contexto_siro.strip():
+        partes.append("\n=== INDICADOR SIRO (resumen) ===")
+        partes.append(contexto_siro.strip())
 
     if aclaraciones:
         partes.append("\n=== ACLARACIONES YA RESPONDIDAS POR EL USUARIO ===")
@@ -128,6 +138,7 @@ def generar_documento(
     sesion: str = "",
     aclaraciones: list[dict] | None = None,
     api_key: str | None = None,
+    contexto_siro: str = "",
 ) -> dict:
     """Llama a Claude y devuelve el documento de control + preguntas.
 
@@ -139,7 +150,9 @@ def generar_documento(
 
     import anthropic
 
-    contexto = construir_contexto(df_registros, df_colaboradores, df_bitacora, sesion, aclaraciones)
+    contexto = construir_contexto(
+        df_registros, df_colaboradores, df_bitacora, sesion, aclaraciones, contexto_siro
+    )
 
     try:
         client = anthropic.Anthropic(api_key=_api_key(api_key))

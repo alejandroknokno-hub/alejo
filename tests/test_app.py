@@ -203,10 +203,25 @@ def test_construir_contexto_incluye_datos_y_aclaraciones():
         registros, registros.iloc[:0], registros.iloc[:0],
         sesion="sX",
         aclaraciones=[{"pregunta": "¿Origen del valor?", "respuesta": "Factura 001"}],
+        contexto_siro="SIROS creación Oracle: 10 registros.",
     )
     assert "REGISTROS DOCUMENTALES" in ctx
     assert "sX" in ctx
     assert "Factura 001" in ctx
+    assert "INDICADOR SIRO" in ctx and "10 registros" in ctx
+
+
+def test_siro_resumen_texto():
+    import pandas as pd
+    inf = pd.DataFrame([
+        {indicador_siro.C_ESTADO: "CERRADO", indicador_siro.C_AREA: "USEM",
+         indicador_siro.C_RANGO_CREACION: "Entre 0 a 5 Dias"},
+        {indicador_siro.C_ESTADO: "PENDIENTE", indicador_siro.C_AREA: "USEM",
+         indicador_siro.C_RANGO_CREACION: "Mayor a 15 Dias"},
+    ])
+    texto = indicador_siro.resumen_texto({"informatica": inf})
+    assert "2 registros" in texto
+    assert "CERRADO" in texto and "USEM" in texto
 
 
 # --- Consolidación de jornada (Excel único) --------------------------------

@@ -515,6 +515,18 @@ with tab_siro:
                 "Cambio de jefe y Promociones internas. Se regeneraron las hojas de gráficos."
             )
 
+            # Guardado automático en la Consolidación de jornada (una vez por archivo).
+            clave_archivo = f"{archivo.name}:{getattr(archivo, 'size', 0)}"
+            if st.session_state.get("siro_guardado_key") != clave_archivo:
+                consolidacion.guardar_siro_en_consolidado(
+                    dfs, df_registros=df,
+                    df_colaboradores=colaboradores.leer_colaboradores(),
+                    df_bitacora=monitor.leer_log(sesion_actual),
+                )
+                st.session_state["siro_guardado_key"] = clave_archivo
+            st.caption("🗂️ Guardado automáticamente en `consolidacion_de_jornada.xlsx` "
+                       "(hojas SIRO + SIRO Graficos).")
+
             etiquetas = {
                 "informatica": "SIROS INFORMATICA (creación Oracle)",
                 "novedades": "SIROS NOVEDADES",
@@ -534,14 +546,14 @@ with tab_siro:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
             )
-            if d2.button("🗂️ Guardar en Consolidación de jornada", use_container_width=True):
+            if d2.button("🔄 Volver a guardar en Consolidación de jornada", use_container_width=True):
                 res = consolidacion.guardar_siro_en_consolidado(
                     dfs, df_registros=df,
                     df_colaboradores=colaboradores.leer_colaboradores(),
                     df_bitacora=monitor.leer_log(sesion_actual),
                 )
                 st.success(
-                    "✅ Guardado en `consolidacion_de_jornada.xlsx` como hojas "
+                    "✅ Actualizado en `consolidacion_de_jornada.xlsx`: hojas "
                     f"{', '.join(res['hojas'])} y gráficos en «{res['graficos']}»."
                 )
         elif archivo is not None:
@@ -576,6 +588,10 @@ with tab_ia:
         generar = col_a.button("🪄 Generar documento de control", use_container_width=True, type="primary")
         col_b.caption(f"Sesión de monitoreo usada: `{sesion_actual}`")
 
+        resumen_siro = indicador_siro.resumen_texto(consolidacion.leer_siro())
+        if resumen_siro:
+            st.caption("Se incluirá el resumen del indicador SIRO guardado en el informe.")
+
         if generar:
             with st.spinner("Claude está analizando los datos y redactando el documento…"):
                 resultado = analista_ia.generar_documento(
@@ -585,6 +601,7 @@ with tab_ia:
                     sesion=sesion_actual,
                     aclaraciones=st.session_state.get("aclaraciones_ia"),
                     api_key=api_key,
+                    contexto_siro=resumen_siro,
                 )
             if resultado["ok"]:
                 st.session_state["doc_ia"] = resultado
@@ -628,6 +645,7 @@ with tab_ia:
                                 sesion=sesion_actual,
                                 aclaraciones=st.session_state["aclaraciones_ia"],
                                 api_key=api_key,
+                                contexto_siro=resumen_siro,
                             )
                         if nuevo["ok"]:
                             st.session_state["doc_ia"] = nuevo

@@ -44,11 +44,15 @@ Sube tu indicador (hoja **SIROS INFORMATICA**) y la app:
 - **Regenera las hojas de gráficos** (GRAFICOS INFORMATICA y GRAFICOS NOVEDADES) con tablas
   de resumen y **gráficos nativos** (por rango de creación, estado, área, índice de efectividad, rango TI).
 - Descargas el indicador completado en Excel (todas las hojas + gráficos).
-- **Guardar en Consolidación de jornada**: con un botón, el indicador SIRO completado se
-  guarda **dentro del Excel `consolidacion_de_jornada.xlsx`** como hojas extra
+- **Guardado automático en Consolidación de jornada**: al procesar el indicador, se guarda
+  solo **dentro del Excel `consolidacion_de_jornada.xlsx`** como hojas extra
   (*SIRO Informatica*, *SIRO Novedades*, *SIRO Cambio de jefe*, *SIRO Prom internas*) más
   una hoja **SIRO Graficos** con los gráficos. Se conserva todo lo demás del consolidado
-  (documentos, registros, KPIs, dashboard y la tabla dinámica nativa).
+  (documentos, registros, KPIs, dashboard y la tabla dinámica nativa). Hay un botón para
+  *volver a guardar* tras registrar nuevos colaboradores.
+- **La IA integra el indicador SIRO**: cuando hay un SIRO guardado, el informe ejecutivo
+  que genera Claude **incorpora los indicadores SIRO** (estados, rangos, índices de
+  efectividad) y los relaciona con el control documental de la jornada.
 
 Además, el **monitoreo** ahora permite elegir la **plataforma** (Oracle / SIRO / Global),
 ya que las peticiones suelen hacerse por la plataforma SIRO y se capturan igual que Oracle.

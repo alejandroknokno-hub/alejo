@@ -373,6 +373,26 @@ def resumenes_novedades(df: pd.DataFrame) -> list[tuple]:
     ]
 
 
+def resumen_texto(dfs: dict) -> str:
+    """Resumen compacto en texto del indicador SIRO, para alimentar a la IA."""
+    if not dfs:
+        return ""
+    lineas: list[str] = []
+
+    def _bloque(titulo, df, resumenes):
+        if df is None or df.empty:
+            return
+        lineas.append(f"{titulo}: {len(df)} registros.")
+        for nombre, res, _ in resumenes(df):
+            if not res.empty:
+                pares = ", ".join(f"{r['Categoría']}={int(r['Cantidad'])}" for _, r in res.iterrows())
+                lineas.append(f"- {nombre}: {pares}")
+
+    _bloque("SIROS creación Oracle (Informática)", dfs.get("informatica"), resumenes_informatica)
+    _bloque("SIROS novedades", dfs.get("novedades"), resumenes_novedades)
+    return "\n".join(lineas)
+
+
 # ===========================================================================
 # Orquestación del libro completo + exportación con gráficos
 # ===========================================================================
