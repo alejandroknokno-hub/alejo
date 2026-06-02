@@ -21,7 +21,26 @@ mes, año y hora) se captura automáticamente al guardar cada registro.
 | 🖥️ **Monitoreo (versión Oracle)** | Captura de pantalla de tus entradas/modificaciones + análisis del flujo de trabajo. |
 | 👥 **Global (Colaboradores)** | Ficha de cada colaborador, cruzada con su actividad documental. |
 | 🤖 **IA / Documentos (Claude)** | Conexión directa con Claude: analiza los datos y genera los documentos de control. |
+| 📋 **Indicador SIRO** | Completa y recalcula tu indicador SIRO (creación Oracle) cruzando con Global. |
 | ⬇️ **Exportación** | Descarga del Excel filtrado en cualquier momento. |
+
+### 📋 Indicador SIRO — completar y recalcular
+
+Sube tu indicador (hoja **SIROS INFORMATICA**) y la app:
+
+- **Enriquece por cédula desde Global**: rellena *código de vendedor, área, fecha de
+  ingreso y nombre* donde estén vacíos o en `N/A`.
+- **Recalcula los campos derivados** (los que hoy llenas a mano), con fórmulas
+  **deducidas y validadas contra tu propio archivo** (coincidencia 100 % en días,
+  rangos e índices):
+  - *Días* = `NETWORKDAYS` (días hábiles, lun–vie, inclusivo):
+    creación→revisión RH, ingreso→revisión RH, creación→asignación correos, revisión RH→cierre TI.
+  - *Índice de efectividad* = EFECTIVO si días efectivos al ingreso ≤ 5; *Índice TI* = EFECTIVO si días de asignación ≤ 3.
+  - *Rangos* según la hoja MEDIDAS; *Mes/Año* desde la **fecha de ingreso**.
+- Descargas el indicador completado en Excel.
+
+Además, el **monitoreo** ahora permite elegir la **plataforma** (Oracle / SIRO / Global),
+ya que las peticiones suelen hacerse por la plataforma SIRO y se capturan igual que Oracle.
 
 ### 🤖 IA / Documentos — Generación con Claude
 
@@ -145,7 +164,8 @@ alejo/
 │   ├── colaboradores.py    # Versión Global: ficha del colaborador
 │   ├── analista_ia.py      # Conexión con Claude: genera documentos de control
 │   ├── consolidacion.py    # Excel único acumulado "Consolidación de jornada"
-│   └── pivote_excel.py     # Inyecta una tabla dinámica (PivotTable) nativa en el .xlsx
+│   ├── pivote_excel.py     # Inyecta una tabla dinámica (PivotTable) nativa en el .xlsx
+│   └── indicador_siro.py   # Completa/recalcula el indicador SIRO (creación Oracle)
 └── tests/
     └── test_app.py         # Pruebas básicas
 ```

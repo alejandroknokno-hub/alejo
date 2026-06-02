@@ -24,6 +24,7 @@ from src import (
     consolidacion,
     data_manager,
     grabador,
+    indicador_siro,
     indicadores,
     monitor,
 )
@@ -86,7 +87,11 @@ intervalo = st.sidebar.slider("Intervalo de refresco (seg)", 5, 60, 15, disabled
 
 # --- Monitoreo (versión Oracle) en la barra lateral ---
 st.sidebar.divider()
-st.sidebar.markdown("### 🖥️ Monitoreo (Oracle)")
+st.sidebar.markdown("### 🖥️ Monitoreo (Oracle / SIRO)")
+plataforma = st.sidebar.selectbox(
+    "Plataforma monitoreada", ["Oracle", "SIRO", "Global"],
+    help="Las peticiones suelen hacerse por la plataforma SIRO; se captura igual que Oracle.",
+)
 sesion_actual = st.sidebar.text_input("Sesión", value="sesion_prueba")
 monitoreo_activo = st.sidebar.toggle(
     "📸 Capturar en cada refresco", value=False, disabled=not tiempo_real,
@@ -103,7 +108,7 @@ if tiempo_real and st_autorefresh is not None:
     if monitoreo_activo:
         res_cap = monitor.capturar_y_detectar(
             sesion=sesion_actual, umbral_pct=umbral_cambio,
-            descripcion="Captura automática (tiempo real)",
+            descripcion=f"[{plataforma}] Captura automática (tiempo real)",
         )
         if res_cap["ok"]:
             if res_cap["cambio_detectado"]:
@@ -139,12 +144,16 @@ st.sidebar.caption(f"🕒 Última carga: {datetime.now().strftime('%H:%M:%S')}")
 # ---------------------------------------------------------------------------
 df = data_manager.leer_registros()
 
-tab_captura, tab_dashboard, tab_monitor, tab_global, tab_ia, tab_registros = st.tabs(
+(
+    tab_captura, tab_dashboard, tab_monitor, tab_global,
+    tab_siro, tab_ia, tab_registros,
+) = st.tabs(
     [
         "📝 Captura de datos",
         "📈 Analítica en tiempo real",
         "🖥️ Monitoreo (Oracle)",
         "👥 Global (Colaboradores)",
+        "📋 Indicador SIRO",
         "🤖 IA / Documentos",
         "🗂️ Registros / Excel",
     ]
@@ -337,7 +346,7 @@ with tab_monitor:
     a1, a2, a3 = st.columns(3)
     if a1.button("📸 Capturar y detectar", use_container_width=True):
         res = monitor.capturar_y_detectar(
-            sesion=sesion_actual, umbral_pct=umbral_cambio, descripcion="Captura manual",
+            sesion=sesion_actual, umbral_pct=umbral_cambio, descripcion=f"[{plataforma}] Captura manual",
         )
         if res["ok"]:
             if res["cambio_detectado"]:
@@ -354,7 +363,7 @@ with tab_monitor:
             tipo_evt = st.selectbox("Tipo", config.TIPOS_EVENTO)
             desc_evt = st.text_input("Descripción", placeholder="Ej: Modifiqué la combinación contable X")
             if st.form_submit_button("Guardar evento"):
-                monitor.registrar_evento(tipo_evt, desc_evt, sesion=sesion_actual)
+                monitor.registrar_evento(tipo_evt, f"[{plataforma}] {desc_evt}", sesion=sesion_actual)
                 st.success("Evento registrado.")
                 st.rerun()
 
@@ -475,7 +484,50 @@ with tab_global:
 
 
 # ---------------------------------------------------------------------------
-# TAB 5: IA / Documentos — Claude genera el documento de control
+# TAB 5: Indicador SIRO — completar/enriquecer y recalcular
+# ---------------------------------------------------------------------------
+with tab_siro:
+    st.subheader("📋 Indicador SIRO (creación Oracle)")
+    st.caption(
+        "Sube tu indicador (hoja *SIROS INFORMATICA*). La app completa lo que falta "
+        "cruzando por **cédula** con Global (código de vendedor, área, fecha de ingreso, "
+        "nombre) y **recalcula** los días, índices, rangos, mes y año."
+    )
+
+    archivo = st.file_uploader("Indicador SIRO (.xlsx)", type=["xlsx"], key="siro_upload")
+    if archivo is not None:
+        try:
+            df_siro, rep = indicador_siro.completar(archivo, colaboradores.leer_colaboradores())
+        except Exception as exc:
+            st.error(f"❌ No se pudo procesar el archivo: {exc}")
+        else:
+            st.success(f"✅ Procesadas {rep['filas']} filas del indicador.")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Código vendedor", f"+{rep['rellenado_codigo']}", help="Rellenados desde Global")
+            c2.metric("Área", f"+{rep['rellenado_area']}")
+            c3.metric("Fecha de ingreso", f"+{rep['rellenado_fecha_ingreso']}")
+            c4.metric("Nombre", f"+{rep['rellenado_nombre']}")
+            st.caption("Días, índices, rangos, mes y año fueron recalculados en todas las filas.")
+
+            st.dataframe(df_siro, use_container_width=True, hide_index=True)
+
+            st.download_button(
+                "⬇️ Descargar indicador completado (Excel)",
+                data=excel_en_memoria_generico(df_siro, {}, indicador_siro.HOJA[:31]),
+                file_name="indicador_siro_completado.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+    else:
+        st.info(
+            "Tip: registra primero a los colaboradores en la pestaña **Global** "
+            "(por cédula) para que la app pueda completar código de vendedor, área, "
+            "fecha de ingreso y nombre automáticamente."
+        )
+
+
+# ---------------------------------------------------------------------------
+# TAB 6: IA / Documentos — Claude genera el documento de control
 # ---------------------------------------------------------------------------
 with tab_ia:
     st.subheader("🤖 Generación de documentos de control con IA")
@@ -610,7 +662,7 @@ with tab_ia:
 
 
 # ---------------------------------------------------------------------------
-# TAB 6: Registros / Excel
+# TAB 7: Registros / Excel
 # ---------------------------------------------------------------------------
 with tab_registros:
     st.subheader("Registros capturados")

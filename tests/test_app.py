@@ -15,6 +15,7 @@ from src import (  # noqa: E402
     consolidacion,
     data_manager,
     grabador,
+    indicador_siro,
     indicadores,
     monitor,
 )
@@ -304,6 +305,66 @@ def test_consolidacion_pivote_interactivo_inyectado(tmp_path, monkeypatch):
 
     # El archivo sigue siendo un .xlsx válido y legible.
     assert consolidacion.HOJA_PIVOTE_INT in pd.ExcelFile(config.CONSOLIDADO_PATH).sheet_names
+
+
+# --- Indicador SIRO --------------------------------------------------------
+def test_siro_networkdays_y_rangos():
+    from datetime import date
+    # 2026-02-24 (mar) -> 2026-03-02 (lun) = 5 días hábiles inclusivo.
+    assert indicador_siro.networkdays(date(2026, 2, 24), date(2026, 3, 2)) == 5
+    assert indicador_siro.networkdays(date(2026, 3, 2), date(2026, 3, 2)) == 1
+    assert indicador_siro.networkdays(None, date(2026, 3, 2)) is None
+    assert indicador_siro.rango_creacion(5) == "Entre 0 a 5 Dias"
+    assert indicador_siro.rango_creacion(11) == "Entre 11 a 15 Dias"
+    assert indicador_siro.rango_creacion(40) == "Mayor a 15 Dias"
+    assert indicador_siro.rango_asignacion(3) == "Entre 1 a 3 Dias"
+    assert indicador_siro.indice(5, indicador_siro.UMBRAL_INGRESO) == "EFECTIVO"
+    assert indicador_siro.indice(8, indicador_siro.UMBRAL_INGRESO) == "RETRASO"
+
+
+def test_siro_calcular_derivados_fila_real():
+    import pandas as pd
+    # Fila real (JONATHAN POVEDA): creación 2/24, revisión 3/2, asignación 2/26,
+    # cierre 3/3, ingreso 3/2 -> días 5/1/3/2, índices EFECTIVO/EFECTIVO.
+    df = pd.DataFrame([{
+        indicador_siro.C_FECHA_CREACION: "2026-02-24",
+        indicador_siro.C_FECHA_REV_RH: "2026-03-02",
+        indicador_siro.C_FECHA_ASIG: "2026-02-26",
+        indicador_siro.C_FECHA_CIERRE: "2026-03-03",
+        indicador_siro.C_FECHA_INGRESO: "2026-03-02",
+        indicador_siro.C_DIAS_CREACION: None, indicador_siro.C_DIAS_EFECTIVOS: None,
+        indicador_siro.C_DIAS_ASIG: None, indicador_siro.C_DIAS_CIERRE: None,
+        indicador_siro.C_INDICE: None, indicador_siro.C_INDICE_TI: None,
+        indicador_siro.C_RANGO_CREACION: None, indicador_siro.C_RANGO_ASIG: None,
+        indicador_siro.C_MES: None, indicador_siro.C_ANIO: None,
+    }])
+    out = indicador_siro.calcular_derivados(df).iloc[0]
+    assert out[indicador_siro.C_DIAS_CREACION] == 5
+    assert out[indicador_siro.C_DIAS_EFECTIVOS] == 1
+    assert out[indicador_siro.C_DIAS_ASIG] == 3
+    assert out[indicador_siro.C_DIAS_CIERRE] == 2
+    assert out[indicador_siro.C_INDICE] == "EFECTIVO"
+    assert out[indicador_siro.C_RANGO_CREACION] == "Entre 0 a 5 Dias"
+    assert out[indicador_siro.C_MES] == "Marzo"          # mes de la fecha de ingreso
+    assert int(out[indicador_siro.C_ANIO]) == 2026
+
+
+def test_siro_enriquecer_desde_global():
+    import pandas as pd
+    colab = pd.DataFrame([{
+        "codigo_vendedor": "319EN09", "cedula": "1000755275", "nombre": "Juan Sepulveda",
+        "cargo": "Asesor", "area": "USEM", "correo": "", "telefono": "",
+        "fecha_ingreso": "2026-02-23", "estado": "Activo",
+    }])
+    df = pd.DataFrame([{
+        indicador_siro.C_CEDULA: "1000755275",
+        indicador_siro.C_CODIGO: "N/A", indicador_siro.C_AREA: "",
+        indicador_siro.C_FECHA_INGRESO: None, indicador_siro.C_NOMBRE: "",
+    }])
+    out, rep = indicador_siro.enriquecer_con_global(df, colab)
+    assert out.iloc[0][indicador_siro.C_CODIGO] == "319EN09"
+    assert out.iloc[0][indicador_siro.C_AREA] == "USEM"
+    assert rep["codigo"] == 1 and rep["area"] == 1 and rep["nombre"] == 1
 
 
 if __name__ == "__main__":
