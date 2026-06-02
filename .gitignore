@@ -1,0 +1,20 @@
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Caché de Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Datos generados en tiempo de ejecución (el Excel de registros)
+data/*.xlsx
+!data/.gitkeep
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

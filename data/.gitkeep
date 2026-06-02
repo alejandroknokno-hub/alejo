@@ -1,0 +1,2 @@
+# Esta carpeta almacena el Excel de registros (control_documental.xlsx).
+# El .xlsx se ignora en git; solo se versiona esta carpeta.
