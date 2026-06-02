@@ -497,27 +497,44 @@ with tab_siro:
     archivo = st.file_uploader("Indicador SIRO (.xlsx)", type=["xlsx"], key="siro_upload")
     if archivo is not None:
         try:
-            df_siro, rep = indicador_siro.completar(archivo, colaboradores.leer_colaboradores())
+            dfs, rep = indicador_siro.completar_libro(archivo, colaboradores.leer_colaboradores())
         except Exception as exc:
             st.error(f"❌ No se pudo procesar el archivo: {exc}")
-        else:
-            st.success(f"✅ Procesadas {rep['filas']} filas del indicador.")
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Código vendedor", f"+{rep['rellenado_codigo']}", help="Rellenados desde Global")
-            c2.metric("Área", f"+{rep['rellenado_area']}")
-            c3.metric("Fecha de ingreso", f"+{rep['rellenado_fecha_ingreso']}")
-            c4.metric("Nombre", f"+{rep['rellenado_nombre']}")
-            st.caption("Días, índices, rangos, mes y año fueron recalculados en todas las filas.")
+            dfs = {}
+        if dfs:
+            inf = rep.get("informatica_filas", 0)
+            nov = rep.get("novedades_filas", 0)
+            rellenados = rep.get("informatica_rellenados", 0) + rep.get("novedades_rellenados", 0)
+            st.success(f"✅ Procesadas {inf} filas de Informática y {nov} de Novedades.")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Filas Informática (creación Oracle)", inf)
+            c2.metric("Filas Novedades", nov)
+            c3.metric("Datos rellenados desde Global", rellenados)
+            st.caption(
+                "Días, índices, rangos, mes y año recalculados en Informática, Novedades, "
+                "Cambio de jefe y Promociones internas. Se regeneraron las hojas de gráficos."
+            )
 
-            st.dataframe(df_siro, use_container_width=True, hide_index=True)
+            etiquetas = {
+                "informatica": "SIROS INFORMATICA (creación Oracle)",
+                "novedades": "SIROS NOVEDADES",
+                "ac_jefe": "Novedades · Cambio de jefe",
+                "prom": "Novedades · Promociones internas",
+            }
+            for clave, nombre in etiquetas.items():
+                if clave in dfs:
+                    with st.expander(f"👁️ {nombre} ({len(dfs[clave])} filas)"):
+                        st.dataframe(dfs[clave], use_container_width=True, hide_index=True)
 
             st.download_button(
-                "⬇️ Descargar indicador completado (Excel)",
-                data=excel_en_memoria_generico(df_siro, {}, indicador_siro.HOJA[:31]),
+                "⬇️ Descargar indicador completado (Excel · todas las hojas + gráficos)",
+                data=indicador_siro.exportar_libro(dfs),
                 file_name="indicador_siro_completado.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
             )
+        elif archivo is not None:
+            st.warning("No se encontraron hojas SIRO reconocidas (SIROS INFORMATICA / NOVEDADES).")
     else:
         st.info(
             "Tip: registra primero a los colaboradores en la pestaña **Global** "

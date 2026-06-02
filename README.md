@@ -37,7 +37,13 @@ Sube tu indicador (hoja **SIROS INFORMATICA**) y la app:
     creación→revisión RH, ingreso→revisión RH, creación→asignación correos, revisión RH→cierre TI.
   - *Índice de efectividad* = EFECTIVO si días efectivos al ingreso ≤ 5; *Índice TI* = EFECTIVO si días de asignación ≤ 3.
   - *Rangos* según la hoja MEDIDAS; *Mes/Año* desde la **fecha de ingreso**.
-- Descargas el indicador completado en Excel.
+- **Procesa todas las hojas**, no solo Informática:
+  - *SIROS NOVEDADES* (traslados): días creación/cierre, índice (EFECTIVO si días creación ≤ 4),
+    rango de creación y rango TI (0‑2 / 3‑5 / >6), mes desde la fecha de creación.
+  - *Cambio de jefe* y *Promociones internas*: días de creación e índice.
+- **Regenera las hojas de gráficos** (GRAFICOS INFORMATICA y GRAFICOS NOVEDADES) con tablas
+  de resumen y **gráficos nativos** (por rango de creación, estado, área, índice de efectividad, rango TI).
+- Descargas el indicador completado en Excel (todas las hojas + gráficos).
 
 Además, el **monitoreo** ahora permite elegir la **plataforma** (Oracle / SIRO / Global),
 ya que las peticiones suelen hacerse por la plataforma SIRO y se capturan igual que Oracle.

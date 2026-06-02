@@ -367,6 +367,54 @@ def test_siro_enriquecer_desde_global():
     assert rep["codigo"] == 1 and rep["area"] == 1 and rep["nombre"] == 1
 
 
+def test_siro_novedades_derivados_y_rangos():
+    import pandas as pd
+    # Fila real: creación 2/20, revisión 3/19, respuesta TI 3/19 -> creación 20,
+    # cierre 1; índice RETRASO (20 > 4); rango "Mayor a 15 Dias"; TI "Entre 0 a 2 Dias".
+    df = pd.DataFrame([{
+        indicador_siro.N_FECHA_CREACION: "2026-02-20",
+        indicador_siro.N_FECHA_REVISION: "2026-03-19",
+        indicador_siro.N_FECHA_RESP_TI: "2026-03-19",
+        indicador_siro.N_DIAS_CREACION: None, indicador_siro.N_DIAS_CIERRE: None,
+        indicador_siro.N_RANGO: None, indicador_siro.N_RANGO_TI: None,
+        indicador_siro.N_INDICE: None, indicador_siro.N_MES: None,
+    }])
+    out = indicador_siro.calcular_derivados_novedades(df).iloc[0]
+    assert out[indicador_siro.N_DIAS_CREACION] == 20
+    assert out[indicador_siro.N_DIAS_CIERRE] == 1
+    assert out[indicador_siro.N_INDICE] == "RETRASO"
+    assert out[indicador_siro.N_RANGO] == "Mayor a 15 Dias"
+    assert out[indicador_siro.N_RANGO_TI] == "Entre 0 a 2 Dias"
+    assert out[indicador_siro.N_MES] == "Febrero"
+    # Regla del índice de novedad: <= 4 es EFECTIVO.
+    assert indicador_siro.rango_cierre_novedad(4) == "Entre 3 a 5 Dias"
+    assert indicador_siro.indice(4, indicador_siro.UMBRAL_NOVEDAD) == "EFECTIVO"
+    assert indicador_siro.indice(5, indicador_siro.UMBRAL_NOVEDAD) == "RETRASO"
+
+
+def test_siro_exportar_libro_con_graficos():
+    import io
+    import zipfile
+    import pandas as pd
+
+    inf = pd.DataFrame([{
+        indicador_siro.C_ID: 1, indicador_siro.C_ESTADO: "CERRADO",
+        indicador_siro.C_AREA: "USEM", indicador_siro.C_RANGO_CREACION: "Entre 0 a 5 Dias",
+    }])
+    nov = pd.DataFrame([{
+        indicador_siro.N_ID: 2, indicador_siro.N_ESTADO: "CERRADO",
+        indicador_siro.N_INDICE: "EFECTIVO", indicador_siro.N_RANGO_TI: "Entre 0 a 2 Dias",
+    }])
+    data = indicador_siro.exportar_libro({"informatica": inf, "novedades": nov})
+    assert zipfile.is_zipfile(io.BytesIO(data))
+    import openpyxl
+    hojas = openpyxl.load_workbook(io.BytesIO(data)).sheetnames
+    assert "SIROS INFORMATICA" in hojas
+    assert "SIROS NOVEDADES" in hojas
+    assert "GRAFICOS INFORMATICA" in hojas
+    assert "GRAFICOS NOVEDADES" in hojas
+
+
 if __name__ == "__main__":
     import subprocess
 
