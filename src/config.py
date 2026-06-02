@@ -54,7 +54,7 @@ CAPTURAS_DIR = DATA_DIR / "capturas"
 MONITOR_LOG = DATA_DIR / "monitor_log.csv"
 MONITOR_COLUMNS = ["fecha_hora", "sesion", "tipo", "descripcion", "archivo"]
 # Tipos de evento que se registran en la bitácora.
-TIPOS_EVENTO = ["Captura", "Entrada", "Modificación", "Consulta", "Nota"]
+TIPOS_EVENTO = ["Captura", "Entrada", "Modificación", "Consulta", "Nota", "Texto"]
 
 # --- Versión Global: información del colaborador ----------------------------
 GLOBAL_PATH = DATA_DIR / "global_colaboradores.xlsx"

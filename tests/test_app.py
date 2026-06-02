@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src import colaboradores, config, data_manager, indicadores, monitor  # noqa: E402
+from src import colaboradores, config, data_manager, grabador, indicadores, monitor  # noqa: E402
 
 
 def _registro_valido(**extra):
@@ -144,6 +144,29 @@ def test_cruce_colaborador_con_registros(tmp_path, monkeypatch):
     df_reg = data_manager.leer_registros()
     cruce = colaboradores.actividad_por_colaborador(df_colab, df_reg)
     assert int(cruce.iloc[0]["registros"]) == 1
+
+
+# --- Grabador tipo video ---------------------------------------------------
+def test_texto_desde_teclas_reconstruye_y_corrige():
+    teclas = list("hola") + ["BACKSPACE", "SPACE"] + list("mundo")
+    # "hola" -> borra 'a' -> "hol" -> espacio -> "hol " -> "mundo"
+    assert grabador.texto_desde_teclas(teclas) == "hol mundo"
+
+
+def test_ensamblar_video_genera_gif(tmp_path, monkeypatch):
+    _usar_temp(tmp_path, monkeypatch)
+    from PIL import Image
+
+    config.CAPTURAS_DIR.mkdir(parents=True, exist_ok=True)
+    for i in range(3):
+        nombre = f"frame_{i}.png"
+        Image.new("RGB", (80, 60), (i * 80, 0, 0)).save(config.CAPTURAS_DIR / nombre)
+        monitor.registrar_evento("Captura", "frame", sesion="vid", archivo=nombre)
+
+    res = grabador.ensamblar_video("vid", fps=2)
+    assert res["ok"], res["error"]
+    assert res["frames"] == 3
+    assert Path(res["archivo"]).exists()
 
 
 if __name__ == "__main__":

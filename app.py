@@ -17,7 +17,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from src import colaboradores, config, data_manager, indicadores, monitor
+from src import colaboradores, config, data_manager, grabador, indicadores, monitor
 
 # El autorefresh es opcional; si no está instalado, la app sigue funcionando.
 try:
@@ -248,6 +248,63 @@ with tab_monitor:
             "Ejecuta la app en tu equipo de trabajo (con pantalla) y con la librería "
             "`mss` instalada. La bitácora de eventos sí funciona en todos lados."
         )
+
+    # --- Grabación tipo video (flujo completo paso a paso) ---
+    est_grab = grabador.estado()
+    if est_grab["activo"]:
+        st.error(
+            f"🔴 **GRABANDO** la sesión `{est_grab['sesion']}` · "
+            f"{est_grab['duracion_seg']:.0f} s · fotograma cada {est_grab['intervalo']:.1f} s · "
+            f"teclado: {'sí' if est_grab['teclado'] else 'no'}"
+        )
+
+    with st.container(border=True):
+        st.markdown("#### 🎥 Grabación de sesión (video paso a paso)")
+        st.caption(
+            "Graba el flujo completo: fotogramas de la pantalla **y lo que escribes**, "
+            "en una sola línea de tiempo. La inicias y la detienes tú."
+        )
+        gc1, gc2, gc3 = st.columns([1, 1, 1])
+        fps_frames = gc3.slider("Fotograma cada (seg)", 1.0, 10.0, 2.0, 0.5,
+                                disabled=est_grab["activo"])
+
+        if not est_grab["activo"]:
+            if gc1.button("⏺️ Iniciar grabación", use_container_width=True, type="primary"):
+                res = grabador.iniciar(sesion_actual, intervalo_frames=fps_frames)
+                if res["ok"]:
+                    st.rerun()
+                else:
+                    st.error(res["error"])
+        else:
+            if gc1.button("⏹️ Detener grabación", use_container_width=True):
+                grabador.detener()
+                st.rerun()
+
+        if gc2.button("🎬 Generar video (GIF)", use_container_width=True,
+                      disabled=est_grab["activo"]):
+            with st.spinner("Ensamblando fotogramas…"):
+                res = grabador.ensamblar_video(sesion_actual, fps=2)
+            if res["ok"]:
+                st.success(f"Video generado con {res['frames']} fotogramas.")
+                st.image(res["archivo"], caption=f"Grabación · sesión {sesion_actual}")
+                with open(res["archivo"], "rb") as fh:
+                    st.download_button(
+                        "⬇️ Descargar video (GIF)", data=fh.read(),
+                        file_name=f"grabacion_{sesion_actual}.gif", mime="image/gif",
+                        use_container_width=True,
+                    )
+            else:
+                st.warning(res["error"])
+
+        # Lo que se escribió durante la sesión (reconstruido del teclado).
+        log_texto = monitor.leer_log(sesion_actual)
+        log_texto = log_texto[log_texto["tipo"] == "Texto"]
+        if not log_texto.empty:
+            with st.expander(f"⌨️ Texto escrito en la sesión ({len(log_texto)} entradas)"):
+                for _, fila in log_texto.sort_values("fecha_hora").iterrows():
+                    st.markdown(f"- `{fila['fecha_hora']:%H:%M:%S}` · {fila['descripcion']}")
+
+    st.divider()
 
     # --- Acciones rápidas ---
     a1, a2, a3 = st.columns(3)

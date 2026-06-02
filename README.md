@@ -27,12 +27,22 @@ mes, año y hora) se captura automáticamente al guardar cada registro.
 Pensada para dejar **evidencia y análisis** de lo que haces en tu aplicativo de
 trabajo (Oracle):
 
+- **🎥 Grabación tipo video (flujo completo paso a paso)**: con un botón inicias
+  una grabación que toma **fotogramas** de la pantalla cada pocos segundos *y*
+  registra **lo que escribes** (teclado) en la misma línea de tiempo. Al detener,
+  ensambla los fotogramas en un **GIF** descargable. Reconstruye qué viste, qué
+  datos había y qué anexaste, paso a paso.
+  - Es **opt-in**: la inicias y la detienes tú, con un indicador `🔴 GRABANDO`
+    visible mientras está activa. Solo registra tu propia sesión en tu equipo.
+  - El registro de teclado usa `pynput` (en macOS puede pedir permisos de
+    Accesibilidad la primera vez). Si no está disponible, igual graba los fotogramas.
 - **Captura de pantalla** manual (botón) o automática (en cada refresco del modo
   tiempo real). Las imágenes se guardan en `data/capturas/`.
 - **Detección automática de cambios**: cada captura se compara con la anterior y,
   si el cambio visual supera la *sensibilidad* configurada, se registra solo como
   una **modificación detectada**. No tienes que anotar nada a mano.
-- **Bitácora de eventos**: registra entradas, modificaciones, consultas y notas.
+- **Bitácora de eventos**: registra entradas, modificaciones, consultas, notas y
+  el texto escrito.
 - **Sesión de prueba**: la app analiza tu flujo de trabajo (duración, ritmo,
   actividad por minuto y tipos de acción) para entender *cómo trabajas*.
 
@@ -96,7 +106,8 @@ alejo/
 │   ├── config.py           # Esquema de columnas, rutas, estados
 │   ├── data_manager.py     # Lectura/escritura y validación contra Excel
 │   ├── indicadores.py      # Cálculo de KPIs e indicadores de control
-│   ├── monitor.py          # Versión Oracle: capturas y análisis del flujo
+│   ├── monitor.py          # Versión Oracle: capturas, detección y análisis
+│   ├── grabador.py         # Grabación tipo video: fotogramas + teclado → GIF
 │   └── colaboradores.py    # Versión Global: ficha del colaborador
 └── tests/
     └── test_app.py         # Pruebas básicas
