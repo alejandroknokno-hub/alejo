@@ -20,7 +20,23 @@ mes, año y hora) se captura automáticamente al guardar cada registro.
 | 🚦 **Indicadores de control** | Tasa de aprobación, pendientes, alertas de cédulas duplicadas, etc. |
 | 🖥️ **Monitoreo (versión Oracle)** | Captura de pantalla de tus entradas/modificaciones + análisis del flujo de trabajo. |
 | 👥 **Global (Colaboradores)** | Ficha de cada colaborador, cruzada con su actividad documental. |
+| 🤖 **IA / Documentos (Claude)** | Conexión directa con Claude: analiza los datos y genera los documentos de control. |
 | ⬇️ **Exportación** | Descarga del Excel filtrado en cualquier momento. |
+
+### 🤖 IA / Documentos — Generación con Claude
+
+La app se conecta directamente con **Claude (API de Anthropic)** para analizar todo lo
+capturado en la jornada (registros, colaboradores y la bitácora de monitoreo) y **redactar
+el documento de control** automáticamente.
+
+- Punto clave: **cuando un dato u origen no queda claro en la sesión, la IA no lo inventa —
+  te pregunta.** Respondes las dudas y pulsas *“Regenerar con mis respuestas”* para obtener
+  una versión depurada.
+- El documento se descarga en Markdown.
+- Configura tu **API key** en la barra lateral (campo *API key de Anthropic*) o define la
+  variable de entorno `ANTHROPIC_API_KEY`. La key se usa solo en tu sesión.
+- Modelo: `claude-opus-4-8`, con *adaptive thinking*, *prompt caching* del prompt estable y
+  salida estructurada (documento + preguntas).
 
 ### 🖥️ Versión Oracle — Monitoreo del trabajo
 
@@ -108,7 +124,8 @@ alejo/
 │   ├── indicadores.py      # Cálculo de KPIs e indicadores de control
 │   ├── monitor.py          # Versión Oracle: capturas, detección y análisis
 │   ├── grabador.py         # Grabación tipo video: fotogramas + teclado → GIF
-│   └── colaboradores.py    # Versión Global: ficha del colaborador
+│   ├── colaboradores.py    # Versión Global: ficha del colaborador
+│   └── analista_ia.py      # Conexión con Claude: genera documentos de control
 └── tests/
     └── test_app.py         # Pruebas básicas
 ```

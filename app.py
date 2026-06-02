@@ -17,7 +17,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from src import colaboradores, config, data_manager, grabador, indicadores, monitor
+from src import analista_ia, colaboradores, config, data_manager, grabador, indicadores, monitor
 
 # El autorefresh es opcional; si no está instalado, la app sigue funcionando.
 try:
@@ -104,6 +104,18 @@ elif tiempo_real and st_autorefresh is None:
     st.sidebar.warning("Instala 'streamlit-autorefresh' para el auto-refresco.")
 
 st.sidebar.divider()
+st.sidebar.markdown("### 🤖 IA (Claude)")
+api_key_ingresada = st.sidebar.text_input(
+    "API key de Anthropic", type="password",
+    help="Se usa solo en esta sesión para generar documentos. O define ANTHROPIC_API_KEY en el entorno.",
+)
+api_key = api_key_ingresada or None
+if analista_ia.ia_disponible(api_key):
+    st.sidebar.caption("✅ IA conectada")
+else:
+    st.sidebar.caption("⚠️ IA no configurada (falta API key)")
+
+st.sidebar.divider()
 st.sidebar.caption(f"📁 Excel: `{config.EXCEL_PATH.name}`")
 st.sidebar.caption(f"🕒 Última carga: {datetime.now().strftime('%H:%M:%S')}")
 
@@ -113,12 +125,13 @@ st.sidebar.caption(f"🕒 Última carga: {datetime.now().strftime('%H:%M:%S')}")
 # ---------------------------------------------------------------------------
 df = data_manager.leer_registros()
 
-tab_captura, tab_dashboard, tab_monitor, tab_global, tab_registros = st.tabs(
+tab_captura, tab_dashboard, tab_monitor, tab_global, tab_ia, tab_registros = st.tabs(
     [
         "📝 Captura de datos",
         "📈 Analítica en tiempo real",
         "🖥️ Monitoreo (Oracle)",
         "👥 Global (Colaboradores)",
+        "🤖 IA / Documentos",
         "🗂️ Registros / Excel",
     ]
 )
@@ -448,7 +461,99 @@ with tab_global:
 
 
 # ---------------------------------------------------------------------------
-# TAB 5: Registros / Excel
+# TAB 5: IA / Documentos — Claude genera el documento de control
+# ---------------------------------------------------------------------------
+with tab_ia:
+    st.subheader("🤖 Generación de documentos de control con IA")
+    st.caption(
+        "Claude analiza los datos de la jornada (registros, colaboradores y la bitácora "
+        "de la sesión) y redacta el documento de control. Cuando un dato u origen no quede "
+        "claro, **te preguntará** en vez de inventarlo."
+    )
+
+    if not analista_ia.ia_disponible(api_key):
+        st.warning(
+            "⚠️ La IA no está configurada. Ingresa tu **API key de Anthropic** en la barra "
+            "lateral (o define `ANTHROPIC_API_KEY` en el entorno) e instala el SDK con "
+            "`pip install anthropic`."
+        )
+    else:
+        col_a, col_b = st.columns([1, 2])
+        generar = col_a.button("🪄 Generar documento de control", use_container_width=True, type="primary")
+        col_b.caption(f"Sesión de monitoreo usada: `{sesion_actual}`")
+
+        if generar:
+            with st.spinner("Claude está analizando los datos y redactando el documento…"):
+                resultado = analista_ia.generar_documento(
+                    df_registros=df,
+                    df_colaboradores=colaboradores.leer_colaboradores(),
+                    df_bitacora=monitor.leer_log(sesion_actual),
+                    sesion=sesion_actual,
+                    aclaraciones=st.session_state.get("aclaraciones_ia"),
+                    api_key=api_key,
+                )
+            if resultado["ok"]:
+                st.session_state["doc_ia"] = resultado
+            else:
+                st.error(f"❌ {resultado['error']}")
+
+        doc = st.session_state.get("doc_ia")
+        if doc:
+            st.divider()
+            st.markdown(f"### {doc['titulo']}")
+            st.info(doc["resumen"])
+
+            # Preguntas de la IA (cuando no está segura de un dato u origen)
+            if doc["preguntas"]:
+                st.markdown("#### ❓ La IA necesita aclarar algunos datos")
+                with st.form("form_aclaraciones"):
+                    respuestas = []
+                    for i, p in enumerate(doc["preguntas"]):
+                        st.markdown(f"**{p['tema']}** — {p['pregunta']}")
+                        st.caption(f"Motivo: {p['motivo']}")
+                        resp = st.text_input("Tu respuesta", key=f"acl_{i}", label_visibility="collapsed")
+                        respuestas.append({"pregunta": p["pregunta"], "respuesta": resp})
+                    if st.form_submit_button("↩️ Regenerar con mis respuestas", use_container_width=True):
+                        st.session_state["aclaraciones_ia"] = [
+                            r for r in respuestas if r["respuesta"].strip()
+                        ]
+                        with st.spinner("Regenerando el documento con tus aclaraciones…"):
+                            nuevo = analista_ia.generar_documento(
+                                df_registros=df,
+                                df_colaboradores=colaboradores.leer_colaboradores(),
+                                df_bitacora=monitor.leer_log(sesion_actual),
+                                sesion=sesion_actual,
+                                aclaraciones=st.session_state["aclaraciones_ia"],
+                                api_key=api_key,
+                            )
+                        if nuevo["ok"]:
+                            st.session_state["doc_ia"] = nuevo
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {nuevo['error']}")
+            else:
+                st.success("✅ La IA generó el documento sin dudas pendientes.")
+
+            st.divider()
+            st.markdown("#### 📄 Documento de control")
+            st.markdown(doc["documento_markdown"])
+
+            st.download_button(
+                "⬇️ Descargar documento (Markdown)",
+                data=doc["documento_markdown"],
+                file_name=f"documento_control_{datetime.now():%Y%m%d_%H%M}.md",
+                mime="text/markdown",
+                use_container_width=True,
+            )
+            u = doc.get("uso", {})
+            st.caption(
+                f"Tokens · entrada: {u.get('entrada', 0)} · salida: {u.get('salida', 0)} "
+                f"· caché: {u.get('cache_lectura', 0)}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# TAB 6: Registros / Excel
 # ---------------------------------------------------------------------------
 with tab_registros:
     st.subheader("Registros capturados")

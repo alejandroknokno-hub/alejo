@@ -8,7 +8,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src import colaboradores, config, data_manager, grabador, indicadores, monitor  # noqa: E402
+from src import (  # noqa: E402
+    analista_ia,
+    colaboradores,
+    config,
+    data_manager,
+    grabador,
+    indicadores,
+    monitor,
+)
 
 
 def _registro_valido(**extra):
@@ -167,6 +175,34 @@ def test_ensamblar_video_genera_gif(tmp_path, monkeypatch):
     assert res["ok"], res["error"]
     assert res["frames"] == 3
     assert Path(res["archivo"]).exists()
+
+
+# --- Analista IA (sin red) -------------------------------------------------
+def test_ia_no_disponible_sin_api_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    assert analista_ia.ia_disponible(api_key=None) is False
+
+
+def test_generar_documento_sin_key_devuelve_error(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    df = data_manager.leer_registros()  # vacío, no importa
+    res = analista_ia.generar_documento(df, df, df, sesion="s", api_key=None)
+    assert res["ok"] is False
+    assert "key" in res["error"].lower() or "anthropic" in res["error"].lower()
+
+
+def test_construir_contexto_incluye_datos_y_aclaraciones():
+    import pandas as pd
+
+    registros = pd.DataFrame([{"codigo_vendedor": "V-1", "cedula": "123"}])
+    ctx = analista_ia.construir_contexto(
+        registros, registros.iloc[:0], registros.iloc[:0],
+        sesion="sX",
+        aclaraciones=[{"pregunta": "¿Origen del valor?", "respuesta": "Factura 001"}],
+    )
+    assert "REGISTROS DOCUMENTALES" in ctx
+    assert "sX" in ctx
+    assert "Factura 001" in ctx
 
 
 if __name__ == "__main__":
