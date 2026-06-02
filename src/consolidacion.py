@@ -18,7 +18,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from . import config, indicadores, pivote_excel
+from . import config, indicador_siro, indicadores, pivote_excel
 
 # Nombres de las hojas de detalle.
 HOJA_REGISTROS = "Registros"
@@ -29,6 +29,14 @@ HOJA_KPIS = "KPIs"
 HOJA_PIVOTES = "Tablas dinámicas"
 HOJA_DASHBOARD = "Dashboard"
 HOJA_PIVOTE_INT = "Pivote interactivo"
+# Hojas del indicador SIRO dentro de la consolidación.
+HOJA_SIRO_GRAFICOS = "SIRO Graficos"
+SIRO_HOJAS = {
+    "informatica": "SIRO Informatica",
+    "novedades": "SIRO Novedades",
+    "ac_jefe": "SIRO Cambio de jefe",
+    "prom": "SIRO Prom internas",
+}
 
 
 def asegurar_archivo() -> None:
@@ -126,6 +134,8 @@ def _escribir_libro(
         _hoja(writer, HOJA_BITACORA, df_bitacora, {}, None)
         # Hojas analíticas: KPIs, tablas dinámicas y dashboard con gráficos.
         _hojas_analiticas(writer.book, df_registros)
+        # Hojas del indicador SIRO (si se guardó previamente) + sus gráficos.
+        _hojas_siro(writer, _leer_cache_siro())
         # Hoja vacía donde se inyectará la tabla dinámica nativa (más abajo).
         writer.book.create_sheet(HOJA_PIVOTE_INT)
 
@@ -253,3 +263,61 @@ def _hojas_analiticas(wb, df_registros: pd.DataFrame | None) -> None:
         barras_c.set_categories(_categorias(pos_comb, 1))
         barras_c.y_axis.title = "Registros"
         ws_dash.add_chart(barras_c, "A20")
+
+
+# --- Indicador SIRO dentro de la consolidación -----------------------------
+def _guardar_cache_siro(dfs: dict) -> None:
+    """Persiste las hojas del indicador SIRO completado en una caché."""
+    config.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with pd.ExcelWriter(config.SIRO_CACHE_PATH, engine="openpyxl") as writer:
+        for clave in SIRO_HOJAS:
+            if clave in dfs and dfs[clave] is not None and not dfs[clave].empty:
+                dfs[clave].to_excel(writer, sheet_name=clave, index=False)
+
+
+def _leer_cache_siro() -> dict:
+    """Lee la caché del indicador SIRO. Devuelve {} si no existe."""
+    if not config.SIRO_CACHE_PATH.exists():
+        return {}
+    try:
+        xls = pd.ExcelFile(config.SIRO_CACHE_PATH, engine="openpyxl")
+        return {h: xls.parse(h) for h in xls.sheet_names}
+    except Exception:
+        return {}
+
+
+def _hojas_siro(writer, dfs_siro: dict) -> None:
+    """Escribe las hojas de datos del indicador SIRO + una hoja de gráficos SIRO."""
+    if not dfs_siro:
+        return
+    for clave, nombre in SIRO_HOJAS.items():
+        df = dfs_siro.get(clave)
+        if df is not None and not df.empty:
+            df.to_excel(writer, sheet_name=nombre[:31], index=False)
+
+    items = []
+    if "informatica" in dfs_siro:
+        items += indicador_siro.resumenes_informatica(dfs_siro["informatica"])
+    if "novedades" in dfs_siro:
+        items += indicador_siro.resumenes_novedades(dfs_siro["novedades"])
+    if items:
+        indicador_siro._hoja_graficos(writer.book, HOJA_SIRO_GRAFICOS, items)
+
+
+def guardar_siro_en_consolidado(
+    dfs: dict,
+    df_registros: pd.DataFrame | None = None,
+    df_colaboradores: pd.DataFrame | None = None,
+    df_bitacora: pd.DataFrame | None = None,
+) -> dict:
+    """Guarda el indicador SIRO completado dentro de la Consolidación de jornada.
+
+    Persiste los datos SIRO y reescribe el libro consolidado (que ahora incluye
+    las hojas SIRO y sus gráficos), conservando los documentos ya acumulados.
+    """
+    _guardar_cache_siro(dfs)
+    consolidado = leer_consolidado()
+    # _escribir_libro incluye las hojas SIRO (desde la caché) e inyecta la PivotTable.
+    _escribir_libro(consolidado, df_registros, df_colaboradores, df_bitacora)
+    hojas = [SIRO_HOJAS[k] for k in SIRO_HOJAS if k in dfs and not dfs[k].empty]
+    return {"ok": True, "hojas": hojas, "graficos": HOJA_SIRO_GRAFICOS}

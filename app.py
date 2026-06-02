@@ -526,13 +526,24 @@ with tab_siro:
                     with st.expander(f"👁️ {nombre} ({len(dfs[clave])} filas)"):
                         st.dataframe(dfs[clave], use_container_width=True, hide_index=True)
 
-            st.download_button(
+            d1, d2 = st.columns(2)
+            d1.download_button(
                 "⬇️ Descargar indicador completado (Excel · todas las hojas + gráficos)",
                 data=indicador_siro.exportar_libro(dfs),
                 file_name="indicador_siro_completado.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
             )
+            if d2.button("🗂️ Guardar en Consolidación de jornada", use_container_width=True):
+                res = consolidacion.guardar_siro_en_consolidado(
+                    dfs, df_registros=df,
+                    df_colaboradores=colaboradores.leer_colaboradores(),
+                    df_bitacora=monitor.leer_log(sesion_actual),
+                )
+                st.success(
+                    "✅ Guardado en `consolidacion_de_jornada.xlsx` como hojas "
+                    f"{', '.join(res['hojas'])} y gráficos en «{res['graficos']}»."
+                )
         elif archivo is not None:
             st.warning("No se encontraron hojas SIRO reconocidas (SIROS INFORMATICA / NOVEDADES).")
     else:

@@ -89,3 +89,6 @@ CONSOLIDADO_COLUMNS: dict[str, str] = {
     "documento_markdown": "Documento",
 }
 CONSOLIDADO_ORDER: list[str] = list(CONSOLIDADO_COLUMNS.keys())
+
+# Caché del indicador SIRO completado (para incluirlo en la consolidación).
+SIRO_CACHE_PATH = DATA_DIR / "siro_cache.xlsx"

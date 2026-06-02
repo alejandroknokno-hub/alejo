@@ -94,6 +94,7 @@ def _usar_temp(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "MONITOR_LOG", tmp_path / "monitor_log.csv")
     monkeypatch.setattr(config, "CAPTURAS_DIR", tmp_path / "capturas")
     monkeypatch.setattr(config, "CONSOLIDADO_PATH", tmp_path / "consolidacion_de_jornada.xlsx")
+    monkeypatch.setattr(config, "SIRO_CACHE_PATH", tmp_path / "siro_cache.xlsx")
 
 
 # --- Versión Oracle: monitoreo ---------------------------------------------
@@ -283,6 +284,36 @@ def test_consolidacion_hojas_analiticas_y_kpis(tmp_path, monkeypatch):
     texto = " ".join(kpi.fillna("").astype(str).values.ravel().tolist())
     assert "Tasa de aprobación" in texto
     assert "Registros totales" in texto
+
+
+def test_siro_guardado_en_consolidacion(tmp_path, monkeypatch):
+    import pandas as pd
+
+    _usar_temp(tmp_path, monkeypatch)
+    data_manager.agregar_registro(_registro_valido())
+
+    inf = pd.DataFrame([{
+        indicador_siro.C_ID: 1, indicador_siro.C_ESTADO: "CERRADO",
+        indicador_siro.C_AREA: "USEM", indicador_siro.C_RANGO_CREACION: "Entre 0 a 5 Dias",
+    }])
+    nov = pd.DataFrame([{
+        indicador_siro.N_ID: 2, indicador_siro.N_ESTADO: "CERRADO",
+        indicador_siro.N_INDICE: "EFECTIVO", indicador_siro.N_RANGO_TI: "Entre 0 a 2 Dias",
+    }])
+
+    res = consolidacion.guardar_siro_en_consolidado(
+        {"informatica": inf, "novedades": nov},
+        df_registros=data_manager.leer_registros(),
+    )
+    assert res["ok"]
+
+    hojas = pd.ExcelFile(config.CONSOLIDADO_PATH).sheet_names
+    # Hojas SIRO + gráficos conviven con las hojas previas de la consolidación.
+    assert "SIRO Informatica" in hojas
+    assert "SIRO Novedades" in hojas
+    assert consolidacion.HOJA_SIRO_GRAFICOS in hojas
+    assert consolidacion.HOJA_REGISTROS in hojas
+    assert config.CONSOLIDADO_SHEET in hojas
 
 
 def test_consolidacion_pivote_interactivo_inyectado(tmp_path, monkeypatch):
