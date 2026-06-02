@@ -73,3 +73,19 @@ COLAB_COLUMNS: dict[str, str] = {
 }
 COLAB_ORDER: list[str] = list(COLAB_COLUMNS.keys())
 ESTADOS_COLAB = ["Activo", "Inactivo", "Vacaciones", "Retirado"]
+
+# --- Consolidación de jornada (un único Excel acumulado, sin separar por fecha)
+CONSOLIDADO_PATH = DATA_DIR / "consolidacion_de_jornada.xlsx"
+CONSOLIDADO_SHEET = "Consolidación de jornada"
+CONSOLIDADO_COLUMNS: dict[str, str] = {
+    "fecha_hora": "Fecha y hora",
+    "sesion": "Sesión",
+    "usuario": "Usuario",
+    "registros_total": "Registros",
+    "valor_total": "Valor total",
+    "titulo": "Título",
+    "resumen": "Resumen",
+    "preguntas_pendientes": "Preguntas pendientes",
+    "documento_markdown": "Documento",
+}
+CONSOLIDADO_ORDER: list[str] = list(CONSOLIDADO_COLUMNS.keys())

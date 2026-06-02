@@ -12,6 +12,7 @@ from src import (  # noqa: E402
     analista_ia,
     colaboradores,
     config,
+    consolidacion,
     data_manager,
     grabador,
     indicadores,
@@ -91,6 +92,7 @@ def _usar_temp(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "GLOBAL_PATH", tmp_path / "colab.xlsx")
     monkeypatch.setattr(config, "MONITOR_LOG", tmp_path / "monitor_log.csv")
     monkeypatch.setattr(config, "CAPTURAS_DIR", tmp_path / "capturas")
+    monkeypatch.setattr(config, "CONSOLIDADO_PATH", tmp_path / "consolidacion_de_jornada.xlsx")
 
 
 # --- Versión Oracle: monitoreo ---------------------------------------------
@@ -203,6 +205,30 @@ def test_construir_contexto_incluye_datos_y_aclaraciones():
     assert "REGISTROS DOCUMENTALES" in ctx
     assert "sX" in ctx
     assert "Factura 001" in ctx
+
+
+# --- Consolidación de jornada (Excel único) --------------------------------
+def test_consolidacion_unico_documento_acumula(tmp_path, monkeypatch):
+    _usar_temp(tmp_path, monkeypatch)
+
+    doc1 = {"titulo": "D1", "resumen": "r1", "documento_markdown": "# uno", "preguntas": []}
+    consolidacion.guardar_documento(doc1, sesion="s1", usuario="u",
+                                    kpis={"total_registros": 3, "valor_total": 100.0})
+    doc2 = {"titulo": "D2", "resumen": "r2", "documento_markdown": "# dos",
+            "preguntas": [{"tema": "t", "pregunta": "p", "motivo": "m"}]}
+    consolidacion.guardar_documento(doc2, sesion="s2", usuario="u")
+
+    df = consolidacion.leer_consolidado()
+    assert len(df) == 2                      # acumula en un único archivo
+    assert config.CONSOLIDADO_PATH.exists()  # un solo Excel, no separado por fecha
+
+    # Regenerar la sesión s2 actualiza su última fila en vez de duplicar.
+    doc2b = {"titulo": "D2b", "resumen": "r", "documento_markdown": "# dos v2", "preguntas": []}
+    consolidacion.guardar_documento(doc2b, sesion="s2", usuario="u", actualizar=True)
+    df = consolidacion.leer_consolidado()
+    assert len(df) == 2
+    assert (df["titulo"] == "D2b").any()
+    assert not (df["titulo"] == "D2").any()
 
 
 if __name__ == "__main__":

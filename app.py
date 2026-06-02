@@ -17,7 +17,16 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from src import analista_ia, colaboradores, config, data_manager, grabador, indicadores, monitor
+from src import (
+    analista_ia,
+    colaboradores,
+    config,
+    consolidacion,
+    data_manager,
+    grabador,
+    indicadores,
+    monitor,
+)
 
 # El autorefresh es opcional; si no está instalado, la app sigue funcionando.
 try:
@@ -39,6 +48,11 @@ st.set_page_config(
 def df_etiquetado(df: pd.DataFrame) -> pd.DataFrame:
     """Renombra las columnas internas a sus etiquetas legibles."""
     return df.rename(columns=config.COLUMNS)
+
+
+def df_etiquetado_generico(df: pd.DataFrame, etiquetas: dict) -> pd.DataFrame:
+    """Renombra columnas con un diccionario de etiquetas cualquiera."""
+    return df.rename(columns=etiquetas)
 
 
 def excel_en_memoria(df: pd.DataFrame) -> bytes:
@@ -494,6 +508,11 @@ with tab_ia:
                 )
             if resultado["ok"]:
                 st.session_state["doc_ia"] = resultado
+                # Guardado automático en el Excel único "Consolidación de jornada".
+                consolidacion.guardar_documento(
+                    resultado, sesion=sesion_actual, usuario=usuario,
+                    kpis=indicadores.kpis_generales(df), actualizar=False,
+                )
             else:
                 st.error(f"❌ {resultado['error']}")
 
@@ -528,6 +547,11 @@ with tab_ia:
                             )
                         if nuevo["ok"]:
                             st.session_state["doc_ia"] = nuevo
+                            # Actualiza la última entrada de esta sesión (no duplica).
+                            consolidacion.guardar_documento(
+                                nuevo, sesion=sesion_actual, usuario=usuario,
+                                kpis=indicadores.kpis_generales(df), actualizar=True,
+                            )
                             st.rerun()
                         else:
                             st.error(f"❌ {nuevo['error']}")
@@ -541,7 +565,7 @@ with tab_ia:
             st.download_button(
                 "⬇️ Descargar documento (Markdown)",
                 data=doc["documento_markdown"],
-                file_name=f"documento_control_{datetime.now():%Y%m%d_%H%M}.md",
+                file_name="documento_control.md",
                 mime="text/markdown",
                 use_container_width=True,
             )
@@ -549,6 +573,28 @@ with tab_ia:
             st.caption(
                 f"Tokens · entrada: {u.get('entrada', 0)} · salida: {u.get('salida', 0)} "
                 f"· caché: {u.get('cache_lectura', 0)}"
+            )
+
+            # --- Consolidación de jornada (Excel único acumulado) ---
+            st.divider()
+            st.markdown("#### 🗂️ Consolidación de jornada")
+            cons_df = consolidacion.leer_consolidado()
+            st.caption(
+                f"Guardado automáticamente en `{config.CONSOLIDADO_PATH.name}` · "
+                f"{len(cons_df)} entrada(s) acumuladas en un único documento (sin separar por fecha)."
+            )
+            st.dataframe(
+                df_etiquetado_generico(
+                    cons_df.drop(columns=["documento_markdown"]), config.CONSOLIDADO_COLUMNS
+                ),
+                use_container_width=True, hide_index=True,
+            )
+            st.download_button(
+                "⬇️ Descargar Consolidación de jornada (Excel)",
+                data=excel_en_memoria_generico(cons_df, config.CONSOLIDADO_COLUMNS, "Consolidacion"),
+                file_name="consolidacion_de_jornada.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
             )
 
 
