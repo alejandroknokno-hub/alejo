@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src import config, data_manager, indicadores  # noqa: E402
+from src import colaboradores, config, data_manager, indicadores, monitor  # noqa: E402
 
 
 def _registro_valido(**extra):
@@ -58,6 +58,76 @@ def test_ciclo_completo_excel(tmp_path, monkeypatch):
     kpis = indicadores.kpis_generales(df)
     assert kpis["total_registros"] == 1
     assert kpis["tasa_aprobacion"] == 100.0
+
+
+def _usar_temp(tmp_path, monkeypatch):
+    """Redirige todas las rutas de datos a una carpeta temporal."""
+    monkeypatch.setattr(config, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(config, "EXCEL_PATH", tmp_path / "registros.xlsx")
+    monkeypatch.setattr(config, "GLOBAL_PATH", tmp_path / "colab.xlsx")
+    monkeypatch.setattr(config, "MONITOR_LOG", tmp_path / "monitor_log.csv")
+    monkeypatch.setattr(config, "CAPTURAS_DIR", tmp_path / "capturas")
+
+
+# --- Versión Oracle: monitoreo ---------------------------------------------
+def test_monitor_bitacora_y_flujo(tmp_path, monkeypatch):
+    _usar_temp(tmp_path, monkeypatch)
+
+    monitor.registrar_evento("Entrada", "Abro Oracle", sesion="s1")
+    monitor.registrar_evento("Modificación", "Cambio valor", sesion="s1")
+    monitor.registrar_evento("Entrada", "Otra sesión", sesion="s2")
+
+    log_s1 = monitor.leer_log("s1")
+    assert len(log_s1) == 2
+
+    flujo = monitor.analizar_flujo("s1")
+    assert flujo["eventos"] == 2
+    assert flujo["entradas"] == 1
+    assert flujo["modificaciones"] == 1
+    assert "eventos" in flujo["resumen"].lower()
+
+
+# --- Versión Global: colaboradores -----------------------------------------
+def test_colaborador_crear_y_validar(tmp_path, monkeypatch):
+    _usar_temp(tmp_path, monkeypatch)
+
+    # Cédula inválida -> error.
+    res = colaboradores.agregar_colaborador({
+        "codigo_vendedor": "V-001", "cedula": "AB", "nombre": "X", "estado": "Activo",
+    })
+    assert not res["ok"]
+
+    # Alta válida.
+    res = colaboradores.agregar_colaborador({
+        "codigo_vendedor": "V-001", "cedula": "1023456789", "nombre": "Ana",
+        "cargo": "Asesora", "area": "Cartera", "estado": "Activo",
+    })
+    assert res["ok"] and res["accion"] == "creado"
+
+    # Misma cédula -> actualiza, no duplica.
+    res = colaboradores.agregar_colaborador({
+        "codigo_vendedor": "V-001", "cedula": "1023456789", "nombre": "Ana María",
+        "estado": "Activo",
+    })
+    assert res["ok"] and res["accion"] == "actualizado"
+
+    df = colaboradores.leer_colaboradores()
+    assert len(df) == 1
+    assert df.iloc[0]["nombre"] == "Ana María"
+
+
+def test_cruce_colaborador_con_registros(tmp_path, monkeypatch):
+    _usar_temp(tmp_path, monkeypatch)
+
+    colaboradores.agregar_colaborador({
+        "codigo_vendedor": "V-001", "cedula": "1023456789", "nombre": "Ana", "estado": "Activo",
+    })
+    data_manager.agregar_registro(_registro_valido(cedula="1023456789"))
+
+    df_colab = colaboradores.leer_colaboradores()
+    df_reg = data_manager.leer_registros()
+    cruce = colaboradores.actividad_por_colaborador(df_colab, df_reg)
+    assert int(cruce.iloc[0]["registros"]) == 1
 
 
 if __name__ == "__main__":

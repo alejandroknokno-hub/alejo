@@ -6,3 +6,5 @@ pandas==2.2.3              # Manejo y análisis de datos
 openpyxl==3.1.5            # Conexión directa de lectura/escritura con Excel (.xlsx)
 plotly==5.24.1             # Gráficos interactivos para los indicadores
 streamlit-autorefresh==1.0.1  # Refresco automático del dashboard (tiempo real)
+mss==9.0.2                 # Captura de pantalla para el monitoreo (versión Oracle)
+Pillow==10.4.0             # Manejo y visualización de las imágenes capturadas

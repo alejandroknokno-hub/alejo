@@ -18,7 +18,31 @@ mes, año y hora) se captura automáticamente al guardar cada registro.
 | 🔗 **Conexión con Excel** | Lee y escribe directamente en `data/control_documental.xlsx`. |
 | 📈 **Analítica en tiempo real** | Dashboard con KPIs y gráficos que se refrescan automáticamente. |
 | 🚦 **Indicadores de control** | Tasa de aprobación, pendientes, alertas de cédulas duplicadas, etc. |
+| 🖥️ **Monitoreo (versión Oracle)** | Captura de pantalla de tus entradas/modificaciones + análisis del flujo de trabajo. |
+| 👥 **Global (Colaboradores)** | Ficha de cada colaborador, cruzada con su actividad documental. |
 | ⬇️ **Exportación** | Descarga del Excel filtrado en cualquier momento. |
+
+### 🖥️ Versión Oracle — Monitoreo del trabajo
+
+Pensada para dejar **evidencia y análisis** de lo que haces en tu aplicativo de
+trabajo (Oracle):
+
+- **Captura de pantalla** manual (botón) o automática (en cada refresco del modo
+  tiempo real). Las imágenes se guardan en `data/capturas/`.
+- **Bitácora de eventos**: registra entradas, modificaciones, consultas y notas.
+- **Sesión de prueba**: la app analiza tu flujo de trabajo (duración, ritmo,
+  actividad por minuto y tipos de acción) para entender *cómo trabajas*.
+
+> 📌 La captura de pantalla requiere ejecutar la app en **tu equipo con pantalla**
+> (no funciona en un servidor sin display). La bitácora y el análisis funcionan
+> en cualquier entorno.
+
+### 👥 Versión Global — Información del colaborador
+
+Equivalente a tu aplicativo "Global": administra la ficha de cada persona
+(código de vendedor, cédula, nombre, cargo, área, contacto, estado) en
+`data/global_colaboradores.xlsx` y la **cruza por cédula** con los registros de
+control documental para ver cuántos documentos y qué valor gestiona cada quien.
 
 ---
 
@@ -68,7 +92,9 @@ alejo/
 ├── src/
 │   ├── config.py           # Esquema de columnas, rutas, estados
 │   ├── data_manager.py     # Lectura/escritura y validación contra Excel
-│   └── indicadores.py      # Cálculo de KPIs e indicadores de control
+│   ├── indicadores.py      # Cálculo de KPIs e indicadores de control
+│   ├── monitor.py          # Versión Oracle: capturas y análisis del flujo
+│   └── colaboradores.py    # Versión Global: ficha del colaborador
 └── tests/
     └── test_app.py         # Pruebas básicas
 ```

@@ -46,3 +46,30 @@ MESES_ES = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ]
+
+# --- Versión Oracle: monitoreo por captura de pantalla ---------------------
+# Carpeta donde se guardan las capturas de pantalla del monitoreo.
+CAPTURAS_DIR = DATA_DIR / "capturas"
+# Bitácora de eventos (entradas, modificaciones y capturas) de cada sesión.
+MONITOR_LOG = DATA_DIR / "monitor_log.csv"
+MONITOR_COLUMNS = ["fecha_hora", "sesion", "tipo", "descripcion", "archivo"]
+# Tipos de evento que se registran en la bitácora.
+TIPOS_EVENTO = ["Captura", "Entrada", "Modificación", "Consulta", "Nota"]
+
+# --- Versión Global: información del colaborador ----------------------------
+GLOBAL_PATH = DATA_DIR / "global_colaboradores.xlsx"
+GLOBAL_SHEET = "Colaboradores"
+
+COLAB_COLUMNS: dict[str, str] = {
+    "codigo_vendedor": "Código de vendedor",
+    "cedula": "Cédula",
+    "nombre": "Nombre",
+    "cargo": "Cargo",
+    "area": "Área",
+    "correo": "Correo",
+    "telefono": "Teléfono",
+    "fecha_ingreso": "Fecha de ingreso",
+    "estado": "Estado",
+}
+COLAB_ORDER: list[str] = list(COLAB_COLUMNS.keys())
+ESTADOS_COLAB = ["Activo", "Inactivo", "Vacaciones", "Retirado"]

@@ -17,7 +17,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from src import config, data_manager, indicadores
+from src import colaboradores, config, data_manager, indicadores, monitor
 
 # El autorefresh es opcional; si no está instalado, la app sigue funcionando.
 try:
@@ -42,10 +42,15 @@ def df_etiquetado(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def excel_en_memoria(df: pd.DataFrame) -> bytes:
-    """Genera un .xlsx en memoria para el botón de descarga."""
+    """Genera un .xlsx en memoria (registros documentales) para descarga."""
+    return excel_en_memoria_generico(df, config.COLUMNS, config.SHEET_NAME)
+
+
+def excel_en_memoria_generico(df: pd.DataFrame, etiquetas: dict, hoja: str) -> bytes:
+    """Genera un .xlsx en memoria a partir de cualquier DataFrame y sus etiquetas."""
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        df_etiquetado(df).to_excel(writer, sheet_name=config.SHEET_NAME, index=False)
+        df.rename(columns=etiquetas).to_excel(writer, sheet_name=hoja, index=False)
     return buffer.getvalue()
 
 
@@ -65,8 +70,24 @@ st.sidebar.divider()
 tiempo_real = st.sidebar.toggle("🔄 Modo tiempo real (auto-refresco)", value=False)
 intervalo = st.sidebar.slider("Intervalo de refresco (seg)", 5, 60, 15, disabled=not tiempo_real)
 
+# --- Monitoreo (versión Oracle) en la barra lateral ---
+st.sidebar.divider()
+st.sidebar.markdown("### 🖥️ Monitoreo (Oracle)")
+sesion_actual = st.sidebar.text_input("Sesión", value="sesion_prueba")
+monitoreo_activo = st.sidebar.toggle(
+    "📸 Capturar en cada refresco", value=False, disabled=not tiempo_real,
+    help="Requiere el modo tiempo real activo. Toma una captura de pantalla en cada ciclo.",
+)
+
 if tiempo_real and st_autorefresh is not None:
-    st_autorefresh(interval=intervalo * 1000, key="auto_refresh")
+    ciclo = st_autorefresh(interval=intervalo * 1000, key="auto_refresh")
+    # Captura automática ligada al ciclo de refresco.
+    if monitoreo_activo:
+        res_cap = monitor.capturar_pantalla(sesion=sesion_actual, descripcion="Captura automática (tiempo real)")
+        if res_cap["ok"]:
+            st.sidebar.caption(f"✅ Captura #{ciclo} guardada")
+        else:
+            st.sidebar.caption("⚠️ Captura no disponible aquí")
 elif tiempo_real and st_autorefresh is None:
     st.sidebar.warning("Instala 'streamlit-autorefresh' para el auto-refresco.")
 
@@ -80,8 +101,14 @@ st.sidebar.caption(f"🕒 Última carga: {datetime.now().strftime('%H:%M:%S')}")
 # ---------------------------------------------------------------------------
 df = data_manager.leer_registros()
 
-tab_captura, tab_dashboard, tab_registros = st.tabs(
-    ["📝 Captura de datos", "📈 Analítica en tiempo real", "🗂️ Registros / Excel"]
+tab_captura, tab_dashboard, tab_monitor, tab_global, tab_registros = st.tabs(
+    [
+        "📝 Captura de datos",
+        "📈 Analítica en tiempo real",
+        "🖥️ Monitoreo (Oracle)",
+        "👥 Global (Colaboradores)",
+        "🗂️ Registros / Excel",
+    ]
 )
 
 
@@ -193,7 +220,158 @@ with tab_dashboard:
 
 
 # ---------------------------------------------------------------------------
-# TAB 3: Registros / Excel
+# TAB 3: Monitoreo (versión Oracle) — capturas y análisis del flujo de trabajo
+# ---------------------------------------------------------------------------
+with tab_monitor:
+    st.subheader("🖥️ Monitoreo del trabajo en Oracle")
+    st.caption(
+        "Registra tus entradas y modificaciones con capturas de pantalla y analiza "
+        "cómo es tu flujo de trabajo durante la sesión."
+    )
+
+    if not monitor.captura_disponible():
+        st.warning(
+            "⚠️ La captura de pantalla no está disponible en este entorno. "
+            "Ejecuta la app en tu equipo de trabajo (con pantalla) y con la librería "
+            "`mss` instalada. La bitácora de eventos sí funciona en todos lados."
+        )
+
+    # --- Acciones rápidas ---
+    a1, a2, a3 = st.columns(3)
+    if a1.button("📸 Capturar ahora", use_container_width=True):
+        res = monitor.capturar_pantalla(sesion=sesion_actual, descripcion="Captura manual")
+        if res["ok"]:
+            st.success("Captura guardada.")
+        else:
+            st.error(res["error"])
+
+    with a2.popover("➕ Registrar evento", use_container_width=True):
+        with st.form("form_evento", clear_on_submit=True):
+            tipo_evt = st.selectbox("Tipo", config.TIPOS_EVENTO)
+            desc_evt = st.text_input("Descripción", placeholder="Ej: Modifiqué la combinación contable X")
+            if st.form_submit_button("Guardar evento"):
+                monitor.registrar_evento(tipo_evt, desc_evt, sesion=sesion_actual)
+                st.success("Evento registrado.")
+                st.rerun()
+
+    a3.metric("Sesión activa", sesion_actual)
+
+    st.divider()
+
+    # --- Análisis del flujo de trabajo (sesión de prueba) ---
+    st.markdown("#### 🔎 Análisis del flujo de trabajo")
+    flujo = monitor.analizar_flujo(sesion_actual)
+    st.info(flujo["resumen"])
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Eventos", flujo["eventos"])
+    m2.metric("Entradas", flujo["entradas"])
+    m3.metric("Modificaciones", flujo["modificaciones"])
+    m4.metric("Capturas", flujo["capturas"])
+
+    m5, m6 = st.columns(2)
+    m5.metric("Duración (min)", f"{flujo['duracion_min']:.1f}")
+    m6.metric("Ritmo (seg/acción)", f"{flujo['intervalo_prom_seg']:.0f}")
+
+    if not flujo["linea_tiempo"].empty:
+        c7, c8 = st.columns(2)
+        with c7:
+            st.markdown("**Actividad por minuto**")
+            fig = px.bar(flujo["linea_tiempo"], x="minuto", y="eventos")
+            st.plotly_chart(fig, use_container_width=True)
+        with c8:
+            st.markdown("**Eventos por tipo**")
+            fig = px.pie(flujo["por_tipo"], names="tipo", values="cantidad", hole=0.45)
+            st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    # --- Galería de capturas recientes ---
+    st.markdown("#### 🖼️ Capturas recientes")
+    capturas = monitor.capturas_recientes(sesion_actual, limite=9)
+    if not capturas:
+        st.caption("Aún no hay capturas en esta sesión.")
+    else:
+        cols = st.columns(3)
+        for i, cap in enumerate(capturas):
+            with cols[i % 3]:
+                st.image(cap["ruta"], use_container_width=True,
+                         caption=f"{cap['fecha_hora']:%H:%M:%S} · {cap['descripcion']}")
+
+    # --- Bitácora completa ---
+    with st.expander("📜 Ver bitácora completa de la sesión"):
+        log = monitor.leer_log(sesion_actual)
+        st.dataframe(log, use_container_width=True, hide_index=True)
+
+
+# ---------------------------------------------------------------------------
+# TAB 4: Global — información del colaborador
+# ---------------------------------------------------------------------------
+with tab_global:
+    st.subheader("👥 Global · Información del colaborador")
+    st.caption("Administra la ficha de cada colaborador y crúzala con su actividad documental.")
+
+    with st.expander("➕ Agregar / actualizar colaborador", expanded=False):
+        with st.form("form_colab", clear_on_submit=True):
+            g1, g2, g3 = st.columns(3)
+            with g1:
+                g_codigo = st.text_input("Código de vendedor *", placeholder="V-00123")
+                g_cedula = st.text_input("Cédula *", placeholder="Solo números")
+                g_nombre = st.text_input("Nombre *")
+            with g2:
+                g_cargo = st.text_input("Cargo")
+                g_area = st.text_input("Área")
+                g_correo = st.text_input("Correo")
+            with g3:
+                g_tel = st.text_input("Teléfono")
+                g_ingreso = st.date_input("Fecha de ingreso")
+                g_estado = st.selectbox("Estado *", config.ESTADOS_COLAB)
+
+            if st.form_submit_button("💾 Guardar colaborador", use_container_width=True):
+                res = colaboradores.agregar_colaborador({
+                    "codigo_vendedor": g_codigo,
+                    "cedula": g_cedula,
+                    "nombre": g_nombre,
+                    "cargo": g_cargo,
+                    "area": g_area,
+                    "correo": g_correo,
+                    "telefono": g_tel,
+                    "fecha_ingreso": g_ingreso.isoformat(),
+                    "estado": g_estado,
+                })
+                if res["ok"]:
+                    st.success(f"✅ Colaborador {res['accion']} correctamente.")
+                    st.rerun()
+                else:
+                    for err in res["errores"]:
+                        st.error(f"❌ {err}")
+
+    df_colab = colaboradores.leer_colaboradores()
+
+    if df_colab.empty:
+        st.info("Aún no hay colaboradores registrados.")
+    else:
+        cruce = colaboradores.actividad_por_colaborador(df_colab, df)
+
+        k1, k2, k3 = st.columns(3)
+        k1.metric("Colaboradores", len(df_colab))
+        k2.metric("Activos", int((df_colab["estado"] == "Activo").sum()))
+        k3.metric("Con actividad documental", int((cruce["registros"] > 0).sum()))
+
+        renombrar = {**config.COLAB_COLUMNS, "registros": "Registros", "valor_gestionado": "Valor gestionado"}
+        st.dataframe(cruce.rename(columns=renombrar), use_container_width=True, hide_index=True)
+
+        st.download_button(
+            "⬇️ Descargar colaboradores (Excel)",
+            data=excel_en_memoria_generico(df_colab, config.COLAB_COLUMNS, config.GLOBAL_SHEET),
+            file_name=f"global_colaboradores_{datetime.now():%Y%m%d}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+
+
+# ---------------------------------------------------------------------------
+# TAB 5: Registros / Excel
 # ---------------------------------------------------------------------------
 with tab_registros:
     st.subheader("Registros capturados")
